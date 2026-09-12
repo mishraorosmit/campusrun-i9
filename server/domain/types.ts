@@ -7,7 +7,7 @@ export type SpawnTier = 'tier1' | 'tier2' | 'tier3' | 'tier4';
 
 export type SpawnStatus = 'active' | 'claimed' | 'cooldown' | 'expired';
 
-export type PlayerRole = 'player' | 'admin' | 'superadmin';
+export type PlayerRole = 'STUDENT' | 'ADMIN' | 'player' | 'admin' | 'superadmin';
 
 export type WeeklyCycleStatus = 'active' | 'completed' | 'upcoming' | 'archived';
 

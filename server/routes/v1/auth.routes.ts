@@ -1,11 +1,9 @@
 import { Router } from 'express';
 import { AuthController } from '../../controllers/AuthController';
-import { createAuthMiddleware } from '../../middlewares/auth';
-import { config } from '../../config';
+import { requireAuthenticatedUser } from '../../middlewares/auth';
 
 export function createAuthRouter(controller: AuthController): Router {
   const router = Router();
-  const requireAuth = createAuthMiddleware(config.JWT_SECRET);
 
   // 1. Google OAuth2 Authorization Code Initiation
   router.get('/google', controller.initiateGoogleLogin);
@@ -23,8 +21,9 @@ export function createAuthRouter(controller: AuthController): Router {
   // 5. Session Logout
   router.post('/logout', controller.logout);
 
-  // 6. Current Authenticated Player Identity
-  router.get('/me', requireAuth, controller.getMe);
+  // 6. Current Authenticated Player Identity / Session Endpoint
+  router.get('/session', requireAuthenticatedUser, controller.getMe);
+  router.get('/me', requireAuthenticatedUser, controller.getMe);
 
   return router;
 }

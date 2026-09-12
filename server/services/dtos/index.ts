@@ -1,4 +1,4 @@
-import { Coordinates, SpawnTier, RankChange } from '../../domain/types';
+import { Coordinates, SpawnTier, RankChange, PlayerRole } from '../../domain/types';
 
 export interface SubmitClaimInputDTO {
   spawnId: string;
@@ -65,7 +65,7 @@ export interface PlayerProfileDTO {
   tier: string;
   claimsCount: number;
   currentStreakDays: number;
-  role: string;
+  role: PlayerRole;
 }
 
 export interface LeaderboardEntryDTO {

@@ -157,14 +157,33 @@ export class GoogleOidcClient {
    * - Expiration check
    */
   public async verifyIdToken(idToken: string): Promise<GoogleTokenPayload> {
+    if (!idToken || typeof idToken !== 'string') {
+      throw new Error('Invalid ID token');
+    }
+
     const parts = idToken.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid ID token format');
     }
 
     const [headerB64, payloadB64, signatureB64] = parts;
-    const header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
-    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as GoogleTokenPayload;
+    let header: any;
+    let payload: GoogleTokenPayload;
+
+    try {
+      header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
+      payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as GoogleTokenPayload;
+    } catch {
+      throw new Error('Failed to parse ID token JSON');
+    }
+
+    // 0. Verify Header Algorithm & Key ID
+    if (header.alg !== 'RS256') {
+      throw new Error(`Unsupported token algorithm: ${header.alg}`);
+    }
+    if (!header.kid || typeof header.kid !== 'string') {
+      throw new Error('Missing or invalid key ID (kid) in token header');
+    }
 
     // 1. Verify Issuer
     const validIssuers = ['https://accounts.google.com', 'accounts.google.com'];
@@ -179,14 +198,21 @@ export class GoogleOidcClient {
 
     // 3. Verify Expiration
     const now = Math.floor(Date.now() / 1000);
-    if (payload.exp < now) {
+    if (!payload.exp || payload.exp < now) {
       throw new Error('Google ID token has expired');
     }
 
-    // 4. Verify Signature against Google JWKS (skip network in mock/test when clientId starts with mock-)
-    if (!this.clientId.startsWith('mock-')) {
-      const jwks = await this.getJwks();
-      const key = jwks.keys.find((k) => k.kid === header.kid);
+    // 4. Verify Signature against Google JWKS (only allow mock bypass in test environment)
+    const isMockInTest = process.env.NODE_ENV === 'test' && this.clientId.startsWith('mock-');
+    if (!isMockInTest) {
+      let jwks = await this.getJwks();
+      let key = jwks.keys.find((k) => k.kid === header.kid);
+      if (!key) {
+        // Invalidate cache and fetch fresh JWKS once to accommodate recent key rotation
+        GoogleOidcClient.cachedJwks = null;
+        jwks = await this.getJwks();
+        key = jwks.keys.find((k) => k.kid === header.kid);
+      }
       if (!key) {
         throw new Error(`Public key with kid "${header.kid}" not found in Google JWKS`);
       }

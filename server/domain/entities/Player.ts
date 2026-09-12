@@ -4,7 +4,9 @@ export interface PlayerProps {
   id: string;
   email: string;
   username: string;
+  displayName?: string;
   avatarUrl?: string;
+  status?: 'active' | 'suspended' | 'deactivated';
   totalPoints: number;
   seasonPoints: number;
   rank: number;
@@ -40,7 +42,16 @@ export class Player {
     return this.props.currentStreakDays;
   }
 
+  get isActive(): boolean {
+    return !this.props.status || this.props.status === 'active';
+  }
+
   public isAdmin(): boolean {
-    return this.props.role === 'admin' || this.props.role === 'superadmin';
+    return this.props.role === 'ADMIN';
+  }
+
+  public isStudent(): boolean {
+    return this.props.role === 'STUDENT';
   }
 }
+

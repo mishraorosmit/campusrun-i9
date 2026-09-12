@@ -11,4 +11,6 @@ export * from './repositories/postgres/PostgresClaimRepository';
 export * from './repositories/postgres/PostgresPlayerRepository';
 export * from './repositories/postgres/PostgresWeeklyCycleRepository';
 export * from './database';
-
+export * from './audit/auditSanitizer';
+export * from './audit/PostgresAuditService';
+export * from './audit/InMemoryAuditService';
