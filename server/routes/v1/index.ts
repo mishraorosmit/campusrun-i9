@@ -6,6 +6,7 @@ import { LeaderboardController } from '../../controllers/LeaderboardController';
 import { ZoneController } from '../../controllers/ZoneController';
 import { AdminController } from '../../controllers/AdminController';
 import { AuthController } from '../../controllers/AuthController';
+import { IAuditService } from '../../services/IAuditService';
 
 import { createSpawnsRouter } from './spawns.routes';
 import { createClaimsRouter } from './claims.routes';
@@ -23,6 +24,7 @@ export interface V1Controllers {
   zoneController: ZoneController;
   adminController: AdminController;
   authController: AuthController;
+  auditService?: IAuditService;
 }
 
 export function createV1Router(controllers: V1Controllers): Router {
@@ -35,7 +37,7 @@ export function createV1Router(controllers: V1Controllers): Router {
   router.use('/players', createPlayerRouter(controllers.playerController));
   router.use('/leaderboard', createLeaderboardRouter(controllers.leaderboardController));
   router.use('/zones', createZonesRouter(controllers.zoneController));
-  router.use('/admin', createAdminRouter(controllers.adminController));
+  router.use('/admin', createAdminRouter(controllers.adminController, controllers.auditService));
 
   return router;
 }

@@ -10,3 +10,4 @@ export * from './GetZonesUseCase';
 export * from './GetAdminOverviewUseCase';
 export * from './AdminManageSpawnsUseCase';
 export * from './AuthService';
+export * from './IAuditService';

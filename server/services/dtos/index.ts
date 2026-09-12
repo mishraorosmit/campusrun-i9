@@ -65,7 +65,7 @@ export interface PlayerProfileDTO {
   tier: string;
   claimsCount: number;
   currentStreakDays: number;
-  role: string;
+  role: 'STUDENT' | 'ADMIN';
 }
 
 export interface LeaderboardEntryDTO {

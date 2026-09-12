@@ -3,6 +3,7 @@ import { config } from './config';
 import { errorHandler } from './middlewares/errorHandler';
 import { requestLogger } from './middlewares/requestLogger';
 import { notFoundHandler } from './middlewares/notFoundHandler';
+import { cookieParserMiddleware } from './middlewares/cookieParser';
 import { createApiRouter } from './routes';
 
 // Repositories (In-Memory Adapters for Phase 02/03 skeleton)
@@ -13,6 +14,9 @@ import {
   InMemoryZoneRepository,
   InMemoryRotationRepository,
   InMemoryLeaderboardRepository,
+  PostgresPlayerRepository,
+  PostgresAuditService,
+  InMemoryAuditService,
   geoCalculator,
 } from './infrastructure';
 
@@ -36,6 +40,7 @@ import {
   GetAdminOverviewUseCase,
   AdminManageSpawnsUseCase,
   AuthService,
+  IAuditService,
 } from './services';
 
 // Controllers
@@ -49,14 +54,17 @@ import {
   AuthController,
 } from './controllers';
 
+import { IPlayerRepository } from './repositories';
+
 export interface AppDependencies {
   spawnRepo?: InMemorySpawnRepository;
-  playerRepo?: InMemoryPlayerRepository;
+  playerRepo?: IPlayerRepository;
   claimRepo?: InMemoryClaimRepository;
   zoneRepo?: InMemoryZoneRepository;
   rotationRepo?: InMemoryRotationRepository;
   leaderboardRepo?: InMemoryLeaderboardRepository;
   oidcClient?: GoogleOidcClient;
+  auditService?: IAuditService;
 }
 
 export function createApp(deps: AppDependencies = {}): Express {
@@ -65,6 +73,7 @@ export function createApp(deps: AppDependencies = {}): Express {
   // 1. Core Middlewares
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParserMiddleware);
 
   // 2. CORS Handling
   app.use((req, res, next) => {
@@ -85,7 +94,7 @@ export function createApp(deps: AppDependencies = {}): Express {
 
   // 4. Composition Root (Dependency Injection)
   const spawnRepo = deps.spawnRepo || new InMemorySpawnRepository();
-  const playerRepo = deps.playerRepo || new InMemoryPlayerRepository();
+  const playerRepo = deps.playerRepo || (config.NODE_ENV === 'test' ? new InMemoryPlayerRepository() : new PostgresPlayerRepository());
   const claimRepo = deps.claimRepo || new InMemoryClaimRepository();
   const zoneRepo = deps.zoneRepo || new InMemoryZoneRepository();
   const rotationRepo = deps.rotationRepo || new InMemoryRotationRepository();
@@ -143,6 +152,13 @@ export function createApp(deps: AppDependencies = {}): Express {
   );
   const authController = new AuthController(authService);
 
+  // Audit Service (Privileged administrative mutation logging)
+  const auditService =
+    deps.auditService ||
+    (config.NODE_ENV === 'test' && playerRepo instanceof InMemoryPlayerRepository
+      ? new InMemoryAuditService()
+      : new PostgresAuditService());
+
   // 5. Mount API Routes under /api
   const apiRouter = createApiRouter({
     spawnController,
@@ -152,6 +168,7 @@ export function createApp(deps: AppDependencies = {}): Express {
     zoneController,
     adminController,
     authController,
+    auditService,
   });
 
   app.use('/api', apiRouter);

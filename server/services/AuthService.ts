@@ -13,7 +13,7 @@ export interface AuthTokens {
     id: string;
     email: string;
     username: string;
-    role: string;
+    role: 'STUDENT' | 'ADMIN';
   };
 }
 
@@ -42,6 +42,8 @@ export class AuthService {
    * Generates authorization URL, state parameter, and code challenge for PKCE flow.
    */
   public initiateGoogleLogin(): { url: string; state: string } {
+    this.pruneExpired();
+
     const state = crypto.randomBytes(24).toString('hex');
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
     const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
@@ -64,7 +66,7 @@ export class AuthService {
       throw new UnauthorizedError('Missing OAuth authorization code or state');
     }
 
-    // 1. Verify and consume state
+    // 1. Verify and consume state (single-use)
     const storedState = this.oauthStates.get(state);
     if (!storedState) {
       throw new UnauthorizedError('Invalid or expired OAuth state parameter. Please restart login.');
@@ -76,13 +78,24 @@ export class AuthService {
     }
 
     // 2. Exchange authorization code for tokens
-    const tokens = await this.oidcClient.exchangeCodeForTokens(code, storedState.codeVerifier);
-    if (!tokens.id_token) {
+    let tokens: any;
+    try {
+      tokens = await this.oidcClient.exchangeCodeForTokens(code, storedState.codeVerifier);
+    } catch (err: any) {
+      throw new UnauthorizedError('Failed to exchange authorization code with Google');
+    }
+
+    if (!tokens || !tokens.id_token) {
       throw new UnauthorizedError('Google did not return a valid identity token (id_token)');
     }
 
     // 3. Verify ID Token server-side
-    const googlePayload = await this.oidcClient.verifyIdToken(tokens.id_token);
+    let googlePayload: GoogleTokenPayload;
+    try {
+      googlePayload = await this.oidcClient.verifyIdToken(tokens.id_token);
+    } catch (err: any) {
+      throw new UnauthorizedError('Google identity token verification failed');
+    }
 
     // 4. Authenticate or provision user
     return this.processVerifiedGoogleIdentity(googlePayload);
@@ -96,7 +109,13 @@ export class AuthService {
       throw new UnauthorizedError('Missing Google ID token');
     }
 
-    const googlePayload = await this.oidcClient.verifyIdToken(idToken);
+    let googlePayload: GoogleTokenPayload;
+    try {
+      googlePayload = await this.oidcClient.verifyIdToken(idToken);
+    } catch (err: any) {
+      throw new UnauthorizedError('Google identity token verification failed');
+    }
+
     return this.processVerifiedGoogleIdentity(googlePayload);
   }
 
@@ -122,7 +141,7 @@ export class AuthService {
     // 3. Normalize email and domain
     const email = payload.email.toLowerCase().trim();
     const parts = email.split('@');
-    if (parts.length !== 2) {
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
       throw new UnauthorizedError('Malformed email address in Google identity');
     }
 
@@ -149,13 +168,14 @@ export class AuthService {
         username,
         avatarUrl: payload.picture,
         displayName: payload.name,
+        status: 'active',
         totalPoints: 0,
         seasonPoints: 0,
         rank: 0,
         tier: 'tier1',
         claimsCount: 0,
         currentStreakDays: 0,
-        role: 'player',
+        role: 'STUDENT',
         createdAt: new Date(),
         lastActiveAt: new Date(),
       } as any);
@@ -163,10 +183,16 @@ export class AuthService {
       await this.playerRepo.save(newPlayer);
       player = newPlayer;
     } else {
-      // Returning user - update last active timestamp
+      // Inactive / Suspended check
+      if (!player.isActive) {
+        throw new ForbiddenError('User account is inactive or suspended. Please contact campus administrator.');
+      }
+
+      // Returning user - update last active timestamp & profile fields
       const updated = new Player({
         ...player.props,
         avatarUrl: player.props.avatarUrl || payload.picture,
+        displayName: player.props.displayName || payload.name,
         lastActiveAt: new Date(),
       });
       await this.playerRepo.save(updated);
@@ -196,9 +222,9 @@ export class AuthService {
     }
 
     const player = await this.playerRepo.findById(session.userId);
-    if (!player) {
+    if (!player || !player.isActive) {
       this.refreshTokens.delete(refreshToken);
-      throw new UnauthorizedError('User account not found');
+      throw new UnauthorizedError('User account not found or inactive');
     }
 
     // Single-use token rotation: invalidate old refresh token
@@ -214,6 +240,23 @@ export class AuthService {
   public revokeSession(refreshToken: string): void {
     if (refreshToken) {
       this.refreshTokens.delete(refreshToken);
+    }
+  }
+
+  /**
+   * Cleans up expired OAuth states and refresh tokens from memory.
+   */
+  private pruneExpired(): void {
+    const now = Date.now();
+    for (const [state, entry] of this.oauthStates.entries()) {
+      if (now > entry.expiresAt) {
+        this.oauthStates.delete(state);
+      }
+    }
+    for (const [token, entry] of this.refreshTokens.entries()) {
+      if (now > entry.expiresAt) {
+        this.refreshTokens.delete(token);
+      }
     }
   }
 

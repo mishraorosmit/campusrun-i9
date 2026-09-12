@@ -5,4 +5,8 @@ export * from './repositories/inmemory/InMemoryClaimRepository';
 export * from './repositories/inmemory/InMemoryZoneRepository';
 export * from './repositories/inmemory/InMemoryRotationRepository';
 export * from './repositories/inmemory/InMemoryLeaderboardRepository';
+export * from './repositories/postgres/PostgresPlayerRepository';
 export * from './database';
+export * from './audit/auditSanitizer';
+export * from './audit/PostgresAuditService';
+export * from './audit/InMemoryAuditService';

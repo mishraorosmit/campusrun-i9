@@ -33,6 +33,11 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
   }
 
   async save(player: Player): Promise<void> {
+    for (const [id, existing] of this.players.entries()) {
+      if (existing.props.email.toLowerCase() === player.props.email.toLowerCase() && id !== player.id) {
+        this.players.delete(id);
+      }
+    }
     this.players.set(player.id, player);
   }
 

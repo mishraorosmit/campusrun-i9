@@ -40,6 +40,10 @@ export class AuthController {
    */
   public handleGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      if (req.query.error) {
+        throw new UnauthorizedError(`Google authentication cancelled or denied: ${req.query.error}`);
+      }
+
       const code = req.query.code as string;
       const state = req.query.state as string;
 
