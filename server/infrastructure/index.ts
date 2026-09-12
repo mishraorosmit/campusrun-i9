@@ -5,4 +5,10 @@ export * from './repositories/inmemory/InMemoryClaimRepository';
 export * from './repositories/inmemory/InMemoryZoneRepository';
 export * from './repositories/inmemory/InMemoryRotationRepository';
 export * from './repositories/inmemory/InMemoryLeaderboardRepository';
+export * from './repositories/inmemory/InMemoryWeeklyCycleRepository';
+export * from './repositories/postgres/PostgresLeaderboardRepository';
+export * from './repositories/postgres/PostgresClaimRepository';
+export * from './repositories/postgres/PostgresPlayerRepository';
+export * from './repositories/postgres/PostgresWeeklyCycleRepository';
 export * from './database';
+

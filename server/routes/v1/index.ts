@@ -6,6 +6,7 @@ import { LeaderboardController } from '../../controllers/LeaderboardController';
 import { ZoneController } from '../../controllers/ZoneController';
 import { AdminController } from '../../controllers/AdminController';
 import { AuthController } from '../../controllers/AuthController';
+import { WeeklyCycleController } from '../../controllers/WeeklyCycleController';
 
 import { createSpawnsRouter } from './spawns.routes';
 import { createClaimsRouter } from './claims.routes';
@@ -14,6 +15,7 @@ import { createLeaderboardRouter } from './leaderboard.routes';
 import { createZonesRouter } from './zones.routes';
 import { createAdminRouter } from './admin.routes';
 import { createAuthRouter } from './auth.routes';
+import { createWeeklyCycleRouter } from './weeklyCycle.routes';
 
 export interface V1Controllers {
   spawnController: SpawnController;
@@ -23,6 +25,7 @@ export interface V1Controllers {
   zoneController: ZoneController;
   adminController: AdminController;
   authController: AuthController;
+  weeklyCycleController: WeeklyCycleController;
 }
 
 export function createV1Router(controllers: V1Controllers): Router {
@@ -36,6 +39,7 @@ export function createV1Router(controllers: V1Controllers): Router {
   router.use('/leaderboard', createLeaderboardRouter(controllers.leaderboardController));
   router.use('/zones', createZonesRouter(controllers.zoneController));
   router.use('/admin', createAdminRouter(controllers.adminController));
+  router.use('/weekly-cycle', createWeeklyCycleRouter(controllers.weeklyCycleController));
 
   return router;
 }

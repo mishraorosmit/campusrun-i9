@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtUtils, JwtPayload } from '../infrastructure/auth/JwtUtils';
-import { UnauthorizedError } from '../errors';
+import { UnauthorizedError, ForbiddenError } from '../errors';
+
 
 export interface AuthenticatedUser {
   id: string;
@@ -85,3 +86,22 @@ export function createOptionalAuthMiddleware(jwtSecret: string) {
     next();
   };
 }
+
+/**
+ * Creates admin authorization middleware requiring valid JWT and admin role.
+ */
+export function createAdminAuthMiddleware(jwtSecret: string) {
+  const authMiddleware = createAuthMiddleware(jwtSecret);
+  return (req: Request, res: Response, next: NextFunction): void => {
+    authMiddleware(req, res, (err) => {
+      if (err) {
+        return next(err);
+      }
+      if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'superadmin')) {
+        return next(new ForbiddenError('Admin privileges required to access this resource'));
+      }
+      next();
+    });
+  };
+}
+

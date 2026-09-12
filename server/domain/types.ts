@@ -9,6 +9,10 @@ export type SpawnStatus = 'active' | 'claimed' | 'cooldown' | 'expired';
 
 export type PlayerRole = 'player' | 'admin' | 'superadmin';
 
+export type WeeklyCycleStatus = 'active' | 'completed' | 'upcoming' | 'archived';
+
+export type ResetType = 'scheduled' | 'manual';
+
 export type RankChange = 'up' | 'down' | 'same';
 
 export interface Coordinates {

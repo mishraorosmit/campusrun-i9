@@ -13,8 +13,17 @@ import {
   InMemoryZoneRepository,
   InMemoryRotationRepository,
   InMemoryLeaderboardRepository,
+  InMemoryWeeklyCycleRepository,
   geoCalculator,
 } from './infrastructure';
+
+// PostgreSQL transaction support
+import { TransactionManager } from './infrastructure/database/transaction';
+import { dbPool } from './infrastructure/database/pool';
+import { PostgresClaimRepository } from './infrastructure/repositories/postgres/PostgresClaimRepository';
+import { PostgresPlayerRepository } from './infrastructure/repositories/postgres/PostgresPlayerRepository';
+import { PostgresLeaderboardRepository } from './infrastructure/repositories/postgres/PostgresLeaderboardRepository';
+import { PostgresWeeklyCycleRepository } from './infrastructure/repositories/postgres/PostgresWeeklyCycleRepository';
 
 // Google OIDC Client
 import { GoogleOidcClient } from './infrastructure/auth/GoogleOidcClient';
@@ -35,6 +44,10 @@ import {
   GetZoneByIdUseCase,
   GetAdminOverviewUseCase,
   AdminManageSpawnsUseCase,
+  ResetWeeklyLeaderboardUseCase,
+  WeeklyCycleService,
+  GetNextWeeklyResetUseCase,
+  ResetWeeklyCycleUseCase,
   AuthService,
 } from './services';
 
@@ -47,7 +60,10 @@ import {
   ZoneController,
   AdminController,
   AuthController,
+  WeeklyCycleController,
 } from './controllers';
+
+import { ILeaderboardRepository, IWeeklyCycleRepository } from './repositories';
 
 export interface AppDependencies {
   spawnRepo?: InMemorySpawnRepository;
@@ -55,7 +71,8 @@ export interface AppDependencies {
   claimRepo?: InMemoryClaimRepository;
   zoneRepo?: InMemoryZoneRepository;
   rotationRepo?: InMemoryRotationRepository;
-  leaderboardRepo?: InMemoryLeaderboardRepository;
+  leaderboardRepo?: ILeaderboardRepository;
+  weeklyCycleRepo?: IWeeklyCycleRepository;
   oidcClient?: GoogleOidcClient;
 }
 
@@ -89,7 +106,10 @@ export function createApp(deps: AppDependencies = {}): Express {
   const claimRepo = deps.claimRepo || new InMemoryClaimRepository();
   const zoneRepo = deps.zoneRepo || new InMemoryZoneRepository();
   const rotationRepo = deps.rotationRepo || new InMemoryRotationRepository();
-  const leaderboardRepo = deps.leaderboardRepo || new InMemoryLeaderboardRepository();
+  const pgLeaderboardRepo = new PostgresLeaderboardRepository(dbPool.getPool());
+  const leaderboardRepo = deps.leaderboardRepo || pgLeaderboardRepo;
+  const pgWeeklyCycleRepo = new PostgresWeeklyCycleRepository(dbPool.getPool());
+  const weeklyCycleRepo = deps.weeklyCycleRepo || pgWeeklyCycleRepo;
   const oidcClient =
     deps.oidcClient ||
     new GoogleOidcClient(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_CALLBACK_URL);
@@ -102,14 +122,19 @@ export function createApp(deps: AppDependencies = {}): Express {
     refreshTokenExpirationSeconds: config.REFRESH_TOKEN_EXPIRATION_SECONDS,
   });
 
+  const txManager = new TransactionManager();
+  const pgClaimRepo = new PostgresClaimRepository(dbPool.getPool());
+  const pgPlayerRepo = new PostgresPlayerRepository(dbPool.getPool());
+
   // Use Cases (Orchestration layer)
   const claimSpawnUseCase = new ClaimSpawnUseCase(
     spawnRepo,
-    playerRepo,
-    claimRepo,
+    pgPlayerRepo,
+    pgClaimRepo,
     leaderboardRepo,
     geoCalculator,
-    eventBus
+    eventBus,
+    txManager
   );
   const getActiveSpawnsUseCase = new GetActiveSpawnsUseCase(spawnRepo);
   const getSpawnByIdUseCase = new GetSpawnByIdUseCase(spawnRepo);
@@ -129,6 +154,10 @@ export function createApp(deps: AppDependencies = {}): Express {
   const getZoneByIdUseCase = new GetZoneByIdUseCase(zoneRepo);
   const getAdminOverviewUseCase = new GetAdminOverviewUseCase(spawnRepo, claimRepo);
   const adminManageSpawnsUseCase = new AdminManageSpawnsUseCase(spawnRepo);
+  const resetWeeklyLeaderboardUseCase = new ResetWeeklyLeaderboardUseCase(leaderboardRepo);
+  const weeklyCycleService = new WeeklyCycleService(weeklyCycleRepo, leaderboardRepo, txManager);
+  const getNextWeeklyResetUseCase = new GetNextWeeklyResetUseCase(weeklyCycleService);
+  const resetWeeklyCycleUseCase = new ResetWeeklyCycleUseCase(weeklyCycleService);
 
   // Controllers (Driving HTTP Adapters - ZERO repository dependencies)
   const spawnController = new SpawnController(getActiveSpawnsUseCase, getSpawnByIdUseCase);
@@ -139,9 +168,13 @@ export function createApp(deps: AppDependencies = {}): Express {
   const adminController = new AdminController(
     adminManageSpawnsUseCase,
     rotateSpawnsUseCase,
-    getAdminOverviewUseCase
+    getAdminOverviewUseCase,
+    resetWeeklyLeaderboardUseCase,
+    resetWeeklyCycleUseCase,
+    weeklyCycleRepo
   );
   const authController = new AuthController(authService);
+  const weeklyCycleController = new WeeklyCycleController(getNextWeeklyResetUseCase);
 
   // 5. Mount API Routes under /api
   const apiRouter = createApiRouter({
@@ -152,6 +185,7 @@ export function createApp(deps: AppDependencies = {}): Express {
     zoneController,
     adminController,
     authController,
+    weeklyCycleController,
   });
 
   app.use('/api', apiRouter);

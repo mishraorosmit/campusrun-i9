@@ -5,3 +5,5 @@ export * from './LeaderboardController';
 export * from './ZoneController';
 export * from './AdminController';
 export * from './AuthController';
+export * from './WeeklyCycleController';
+

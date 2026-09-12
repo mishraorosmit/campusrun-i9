@@ -2,6 +2,7 @@ import { ISpawnRepository } from '../repositories/ISpawnRepository';
 import { IPlayerRepository } from '../repositories/IPlayerRepository';
 import { IClaimRepository } from '../repositories/IClaimRepository';
 import { ILeaderboardRepository } from '../repositories/ILeaderboardRepository';
+import { ITransactionManager } from '../repositories/ITransactionManager';
 import { IEventBus } from '../events/IEventBus';
 import { IGeofencingService, GeofencingRules, ClaimRules } from '../domain/rules';
 import { Claim } from '../domain/entities/Claim';
@@ -17,7 +18,8 @@ export class ClaimSpawnUseCase {
     private readonly claimRepo: IClaimRepository,
     private readonly leaderboardRepo: ILeaderboardRepository,
     private readonly geoCalculator: IGeofencingService,
-    private readonly eventBus: IEventBus
+    private readonly eventBus: IEventBus,
+    private readonly txManager: ITransactionManager
   ) {}
 
   public async execute(input: SubmitClaimInputDTO): Promise<ClaimResultDTO> {
@@ -39,7 +41,11 @@ export class ClaimSpawnUseCase {
     // 4. Validate claim rules
     const ruleCheck = ClaimRules.validateCanClaim(spawn, existingClaimsCount);
     if (!ruleCheck.canClaim) {
-      throw new DomainError(ruleCheck.reason || 'Cannot claim spawn point', ErrorCodes.DOMAIN_ERROR);
+      const isAlreadyClaimed = ruleCheck.reason?.includes('already claimed');
+      throw new DomainError(
+        ruleCheck.reason || 'Cannot claim spawn point', 
+        isAlreadyClaimed ? ErrorCodes.ALREADY_CLAIMED : ErrorCodes.DOMAIN_ERROR
+      );
     }
 
     // 5. Verify geofencing / claim radius
@@ -71,9 +77,15 @@ export class ClaimSpawnUseCase {
       distanceAtClaimMeters: geofence.distanceMeters,
     });
 
-    // 7. Persist claim and update player points
-    await this.claimRepo.save(claim);
-    await this.playerRepo.updatePoints(player.id, spawn.points);
+    // 7. Persist claim and update player points in a single transaction
+    await this.txManager.runInTransaction(async (tx) => {
+      const claimInserted = await this.claimRepo.saveTx(claim, tx);
+      if (!claimInserted) {
+        throw new DomainError('Player has already claimed this spawn point during the current rotation', ErrorCodes.ALREADY_CLAIMED);
+      }
+      await this.playerRepo.updatePointsTx(player.id, spawn.points, tx);
+    });
+    
     await this.leaderboardRepo.recordScore(player.id, spawn.points);
 
     // 8. Publish domain event

@@ -1,5 +1,6 @@
 import { IPlayerRepository } from '../../../repositories/IPlayerRepository';
 import { Player } from '../../../domain/entities/Player';
+import { ITransactionContext } from '../../../repositories/ITransactionManager';
 
 export class InMemoryPlayerRepository implements IPlayerRepository {
   private players: Map<string, Player> = new Map();
@@ -50,15 +51,15 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
     this.players.set(id, updated);
   }
 
-  async incrementStreak(id: string): Promise<void> {
-    const player = this.players.get(id);
-    if (!player) return;
+  async updatePointsTx(id: string, additionalPoints: number, tx: ITransactionContext): Promise<void> {
+    return this.updatePoints(id, additionalPoints);
+  }
 
-    const updated = new Player({
-      ...player.props,
-      currentStreakDays: player.props.currentStreakDays + 1,
-      lastActiveAt: new Date(),
-    });
-    this.players.set(id, updated);
+  async incrementStreak(id: string): Promise<void> {
+    const player = await this.findById(id);
+    if (player) {
+      player.props.currentStreakDays += 1;
+      this.players.set(id, player);
+    }
   }
 }

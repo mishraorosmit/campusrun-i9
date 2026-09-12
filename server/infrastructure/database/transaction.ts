@@ -1,6 +1,6 @@
-import { PoolClient } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { dbPool } from './pool';
-import { ITransactionManager, ITransactionContext, IQueryResult } from './types';
+import { ITransactionManager, ITransactionContext, IQueryResult } from '../../repositories/ITransactionManager';
 import { normalizeDatabaseError } from './errors';
 
 export class TransactionManager implements ITransactionManager {

@@ -102,39 +102,50 @@ export default function App() {
     };
   }, [addToast]);
 
+  const isClaimingRef = React.useRef<boolean>(false);
+
   // Handle Spawn Claiming
   const handleClaimSpawn = async (spawnId: string): Promise<ClaimResult> => {
-    const res = await gameService.claimSpawn(spawnId, playerLat, playerLng);
-    if (res.success) {
-      addToast({
-        title: 'Points Claimed!',
-        message: res.message,
-        type: 'success',
-      });
-      // Refresh local state from authoritative service
-      const [updatedSpawns, updatedPlayer, updatedClaims, updatedWeekly, updatedAllTime, updatedNotifs] =
-        await Promise.all([
-          gameService.getSpawns(),
-          gameService.getPlayerProfile(),
-          gameService.getClaimsHistory(),
-          gameService.getWeeklyLeaderboard(),
-          gameService.getAllTimeLeaderboard(),
-          gameService.getNotifications(),
-        ]);
-      setSpawns(updatedSpawns);
-      setPlayer(updatedPlayer);
-      setClaims(updatedClaims);
-      setWeeklyLeaderboard(updatedWeekly);
-      setAllTimeLeaderboard(updatedAllTime);
-      setNotifications(updatedNotifs);
-    } else {
-      addToast({
-        title: 'Claim Denied',
-        message: res.message,
-        type: 'warning',
-      });
+    if (isClaimingRef.current) {
+      return { success: false, message: 'Claim request already in progress', pointsAwarded: 0 };
     }
-    return res;
+    isClaimingRef.current = true;
+    
+    try {
+      const res = await gameService.claimSpawn(spawnId, playerLat, playerLng);
+      if (res.success) {
+        addToast({
+          title: 'Points Claimed!',
+          message: res.message,
+          type: 'success',
+        });
+        // Refresh local state from authoritative service
+        const [updatedSpawns, updatedPlayer, updatedClaims, updatedWeekly, updatedAllTime, updatedNotifs] =
+          await Promise.all([
+            gameService.getSpawns(),
+            gameService.getPlayerProfile(),
+            gameService.getClaimsHistory(),
+            gameService.getWeeklyLeaderboard(),
+            gameService.getAllTimeLeaderboard(),
+            gameService.getNotifications(),
+          ]);
+        setSpawns(updatedSpawns);
+        setPlayer(updatedPlayer);
+        setClaims(updatedClaims);
+        setWeeklyLeaderboard(updatedWeekly);
+        setAllTimeLeaderboard(updatedAllTime);
+        setNotifications(updatedNotifs);
+      } else {
+        addToast({
+          title: 'Claim Denied',
+          message: res.message,
+          type: 'warning',
+        });
+      }
+      return res;
+    } finally {
+      isClaimingRef.current = false;
+    }
   };
 
   const handleMarkNotificationAsRead = async (id: string) => {

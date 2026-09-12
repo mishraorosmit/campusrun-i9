@@ -11,7 +11,9 @@
     "lint": "tsc --noEmit",
     "server": "tsx server/index.ts",
     "server:dev": "tsx watch server/index.ts",
-    "db:migrate": "tsx server/infrastructure/database/migrations/cli.ts"
+    "db:migrate": "tsx server/infrastructure/database/migrations/cli.ts",
+    "worker:reset": "tsx server/workers/weeklyResetWorker.ts",
+    "test": "tsx --test server/**/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

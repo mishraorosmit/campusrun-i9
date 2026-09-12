@@ -1,5 +1,6 @@
 import { IClaimRepository } from '../../../repositories/IClaimRepository';
 import { Claim } from '../../../domain/entities/Claim';
+import { ITransactionContext } from '../../../repositories/ITransactionManager';
 
 export class InMemoryClaimRepository implements IClaimRepository {
   private claims: Map<string, Claim> = new Map();
@@ -27,6 +28,17 @@ export class InMemoryClaimRepository implements IClaimRepository {
 
   async save(claim: Claim): Promise<void> {
     this.claims.set(claim.id, claim);
+  }
+
+  async saveTx(claim: Claim, tx: ITransactionContext): Promise<boolean> {
+    // In-memory mock: ignore tx, just check if duplicate exists in the same batch
+    for (const c of this.claims.values()) {
+      if (c.playerId === claim.playerId && c.spawnId === claim.spawnId) {
+        return false;
+      }
+    }
+    this.claims.set(claim.id, claim);
+    return true;
   }
 
   async findRecent(limit = 20): Promise<Claim[]> {

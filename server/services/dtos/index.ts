@@ -70,8 +70,10 @@ export interface PlayerProfileDTO {
 
 export interface LeaderboardEntryDTO {
   rank: number;
+  profile_id?: string;
   playerId: string;
   username: string;
+  displayName?: string;
   avatarUrl?: string;
   points: number;
   claimsCount: number;

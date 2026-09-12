@@ -116,6 +116,31 @@ export class MockGameService implements IGameService {
     playerLat: number,
     playerLng: number
   ): Promise<ClaimResult> {
+    try {
+      const resp = await fetch('/api/v1/claims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spawnId, playerId: this.player.id, lat: playerLat, lng: playerLng })
+      });
+      
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok) {
+        return {
+          success: false,
+          pointsAwarded: 0,
+          message: data.error?.message || 'Failed to claim spawn on server',
+        };
+      }
+    } catch (e) {
+      console.warn('Backend claim failed', e);
+      return {
+        success: false,
+        pointsAwarded: 0,
+        message: 'Network error or backend unavailable',
+      };
+    }
+
     const spawnIndex = this.spawns.findIndex((s) => s.id === spawnId);
     if (spawnIndex === -1) {
       return { success: false, pointsAwarded: 0, message: 'Spawn point not found.' };
