@@ -29,7 +29,7 @@ export class PostgresClaimRepository implements IClaimRepository {
     return res.rowCount !== null && res.rowCount > 0;
   }
 
-  async countBySpawnAndPlayer(spawnId: string, playerId: string): Promise<number> {
+  async countBySpawnAndPlayer(spawnId: string, playerId: string, _batchId?: string): Promise<number> {
     const res = await this.pool.query(
       'SELECT COUNT(*) as count FROM claims WHERE spawn_id = $1 AND player_id = $2',
       [spawnId, playerId]
@@ -125,6 +125,11 @@ export class PostgresClaimRepository implements IClaimRepository {
           },
         })
     );
+  }
+
+  async hasClaimed(spawnId: string, playerId: string, batchId?: string): Promise<boolean> {
+    const count = await this.countBySpawnAndPlayer(spawnId, playerId, batchId);
+    return count > 0;
   }
 
   async save(claim: Claim): Promise<void> {

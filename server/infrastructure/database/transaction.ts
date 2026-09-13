@@ -3,6 +3,7 @@ import { dbPool } from './pool';
 import { ITransactionManager, ITransactionContext, IQueryResult } from '../../repositories/ITransactionManager';
 import { normalizeDatabaseError } from './errors';
 import { AppError } from '../../errors';
+import { InternalServerError } from '../../errors/AuthErrors';
 
 export class TransactionManager implements ITransactionManager {
   public async runInTransaction<T>(work: (tx: ITransactionContext) => Promise<T>): Promise<T> {
@@ -43,12 +44,15 @@ export class TransactionManager implements ITransactionManager {
       if (err && typeof err === 'object' && 'code' in err && typeof (err as any).code === 'string') {
         throw normalizeDatabaseError(err);
       }
-      throw err;
+      // Wrap unknown errors in InternalServerError so they have a consistent error shape
+      const message = err instanceof Error ? err.message : String(err);
+      throw new InternalServerError(`Transaction failed: ${message}`);
     } finally {
       client.release();
     }
   }
 }
+
 
 export const transactionManager = new TransactionManager();
 

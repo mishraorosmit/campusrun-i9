@@ -71,6 +71,10 @@ class FakeClaimRepository implements IClaimRepository {
     this.claims.set(claim.id, claim);
   }
 
+  async hasClaimed(spawnId: string, playerId: string): Promise<boolean> {
+    return this.claimedSet.has(`${playerId}:${spawnId}`);
+  }
+
   async findRecent(): Promise<Claim[]> {
     return Array.from(this.claims.values());
   }
@@ -126,7 +130,22 @@ class FakeSpawnRepository implements ISpawnRepository {
   async countActive(): Promise<number> {
     return (await this.findActive()).length;
   }
+
+  async findAvailableForBatch(): Promise<SpawnPoint[]> {
+    return Array.from(this.spawns.values());
+  }
+
+  async create(spawn: SpawnPoint): Promise<SpawnPoint> {
+    this.spawns.set(spawn.id, spawn);
+    return spawn;
+  }
+
+  async update(spawn: SpawnPoint): Promise<SpawnPoint> {
+    this.spawns.set(spawn.id, spawn);
+    return spawn;
+  }
 }
+
 
 class FakePlayerRepository implements IPlayerRepository {
   public players = new Map<string, Player>();

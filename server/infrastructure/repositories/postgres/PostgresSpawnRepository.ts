@@ -1,7 +1,9 @@
 import { ISpawnRepository } from '../../../repositories/ISpawnRepository';
 import { SpawnPoint, SpawnPointProps } from '../../../domain/entities/SpawnPoint';
 import { BoundingBox, Coordinates } from '../../../domain/types';
+import { ITransactionContext } from '../../../infrastructure/database/types';
 import { dbPool } from '../../database/pool';
+
 
 export class PostgresSpawnRepository implements ISpawnRepository {
   constructor(private readonly pool: any = dbPool.getPool()) {}
@@ -252,7 +254,125 @@ export class PostgresSpawnRepository implements ISpawnRepository {
     }
   }
 
+  public async create(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
+    const client = tx || this.pool;
+    await client.query(
+      `INSERT INTO spawn_points (
+        id, code, batch_id, title, description, clue, tier, points, claim_radius_meters,
+        lat, lng, svg_x, svg_y, status, enabled, claim_count, max_claims, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+      )`,
+      [
+        spawn.id,
+        spawn.code,
+        (spawn as any).batchId || null,
+        spawn.props.title,
+        spawn.props.description || null,
+        spawn.props.clue || null,
+        spawn.props.tier,
+        spawn.points,
+        spawn.claimRadiusMeters,
+        spawn.coordinates.lat,
+        spawn.coordinates.lng,
+        spawn.props.svgCoordinates.x,
+        spawn.props.svgCoordinates.y,
+        spawn.status,
+        spawn.isEnabled,
+        spawn.props.claimCount || 0,
+        spawn.props.maxClaims || null,
+        spawn.props.spawnedAt || new Date(),
+        new Date(),
+      ]
+    );
+    return spawn;
+  }
+
+  public async update(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
+    const client = tx || this.pool;
+    await client.query(
+      `UPDATE spawn_points SET
+        title = $2, description = $3, clue = $4, tier = $5, points = $6,
+        claim_radius_meters = $7, lat = $8, lng = $9, svg_x = $10, svg_y = $11,
+        status = $12, enabled = $13, updated_at = NOW()
+       WHERE id = $1`,
+      [
+        spawn.id,
+        spawn.props.title,
+        spawn.props.description || null,
+        spawn.props.clue || null,
+        spawn.props.tier,
+        spawn.points,
+        spawn.claimRadiusMeters,
+        spawn.coordinates.lat,
+        spawn.coordinates.lng,
+        spawn.props.svgCoordinates.x,
+        spawn.props.svgCoordinates.y,
+        spawn.status,
+        spawn.isEnabled,
+      ]
+    );
+    return spawn;
+  }
+
+  public async findAll(options?: import('../../../repositories/ISpawnRepository').SpawnFilterOptions): Promise<SpawnPoint[]> {
+    let query = `
+      SELECT s.*, b.expires_at as batch_expires_at
+      FROM spawn_points s
+      LEFT JOIN spawn_batches b ON s.batch_id = b.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (options?.status) {
+      query += ` AND s.status = $${paramIdx++}`;
+      params.push(options.status);
+    }
+    if (options?.enabled !== undefined) {
+      query += ` AND s.enabled = $${paramIdx++}`;
+      params.push(options.enabled);
+    }
+    if (options?.batchId) {
+      query += ` AND s.batch_id = $${paramIdx++}`;
+      params.push(options.batchId);
+    }
+    if (options?.tier) {
+      query += ` AND s.tier = $${paramIdx++}`;
+      params.push(options.tier);
+    }
+    query += ' ORDER BY s.created_at DESC';
+    if (options?.limit) {
+      query += ` LIMIT $${paramIdx++}`;
+      params.push(options.limit);
+    }
+    if (options?.offset) {
+      query += ` OFFSET $${paramIdx++}`;
+      params.push(options.offset);
+    }
+
+    const res = await this.pool.query(query, params);
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
+  }
+
+  public async findAvailableForBatch(limit = 100): Promise<SpawnPoint[]> {
+    const res = await this.pool.query(
+      `SELECT s.*, NULL as batch_expires_at
+       FROM spawn_points s
+       WHERE s.enabled = true
+         AND (s.batch_id IS NULL OR NOT EXISTS (
+           SELECT 1 FROM spawn_batches b
+           WHERE b.id = s.batch_id AND b.status = 'active'
+         ))
+       ORDER BY RANDOM()
+       LIMIT $1`,
+      [limit]
+    );
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
+  }
+
   private mapRowToSpawnPoint(row: any): SpawnPoint {
+
     const props: SpawnPointProps = {
       id: row.id,
       code: row.code,

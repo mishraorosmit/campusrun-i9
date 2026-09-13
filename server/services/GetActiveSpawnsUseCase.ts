@@ -1,31 +1,15 @@
 import { ISpawnRepository } from '../repositories/ISpawnRepository';
 import { BoundingBox } from '../domain/types';
-import { SpawnSummaryDTO } from './dtos';
+import { SpawnPoint } from '../domain/entities/SpawnPoint';
 
 export class GetActiveSpawnsUseCase {
   constructor(private readonly spawnRepo: ISpawnRepository) {}
 
-  public async execute(bounds?: BoundingBox): Promise<SpawnSummaryDTO[]> {
+  public async execute(bounds?: BoundingBox): Promise<SpawnPoint[]> {
     const spawns = bounds
-      ? await this.spawnRepo.findWithinBounds(bounds)
+      ? await this.spawnRepo.findActive({ bounds })
       : await this.spawnRepo.findActive();
 
-    return spawns
-      .filter((s) => s.isActive())
-      .map((s) => ({
-        id: s.id,
-        code: s.code,
-        title: s.props.title,
-        description: s.props.description || undefined,
-        clue: s.props.clue || undefined,
-        tier: s.props.tier,
-        status: s.status,
-        points: s.points,
-        claimRadiusMeters: s.claimRadiusMeters,
-        coordinates: s.coordinates,
-        svgCoordinates: s.props.svgCoordinates,
-        zoneName: s.props.zoneName,
-        expiresAt: s.props.expiresAt.toISOString(),
-      }));
+    return spawns.filter((s) => s.isActive());
   }
 }

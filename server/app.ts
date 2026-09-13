@@ -69,7 +69,9 @@ import {
   GetPlayerProfileUseCase,
   GetClaimsHistoryUseCase,
   GetZonesUseCase,
+  GetZoneByIdUseCase,
   GetAdminOverviewUseCase,
+
   ResetWeeklyLeaderboardUseCase,
   WeeklyCycleService,
   GetNextWeeklyResetUseCase,

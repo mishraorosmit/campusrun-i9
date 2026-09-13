@@ -60,6 +60,10 @@ describe('ClaimController Concurrent Duplicate Requests', () => {
     });
 
     const spawnRepo: ISpawnRepository = {
+      create: async (s) => s,
+      update: async (s) => s,
+      findAll: async () => [spawn],
+      findAvailableForBatch: async () => [spawn],
       findById: async () => spawn,
       findByCode: async () => spawn,
       findActive: async () => [spawn],
@@ -83,6 +87,7 @@ describe('ClaimController Concurrent Duplicate Requests', () => {
 
     const claimRepo: IClaimRepository = {
       countBySpawnAndPlayer: async (sId, pId) => (claimRepoUniqueSet.has(`${pId}:${sId}`) ? 1 : 0),
+      hasClaimed: async (sId, pId) => claimRepoUniqueSet.has(`${pId}:${sId}`),
       saveTx: async (claim, _tx) => {
         const key = `${claim.playerId}:${claim.spawnId}`;
         if (claimRepoUniqueSet.has(key)) return false;

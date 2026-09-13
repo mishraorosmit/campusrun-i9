@@ -54,6 +54,10 @@ class InMemoryConcurrentClaimRepository implements IClaimRepository {
     this.claims.set(claim.id, claim);
   }
 
+  async hasClaimed(spawnId: string, playerId: string): Promise<boolean> {
+    return this.claimedSet.has(`${playerId}:${spawnId}`);
+  }
+
   async findRecent(): Promise<Claim[]> {
     return Array.from(this.claims.values());
   }
@@ -124,6 +128,10 @@ describe('POST /api/v1/claims Endpoint and Duplicate Protection', () => {
     });
 
     spawnRepo = {
+      create: async (s: any) => s,
+      update: async (s: any) => s,
+      findAll: async () => [activeSpawn],
+      findAvailableForBatch: async () => [activeSpawn],
       findById: async (id: string) => {
         if (id === activeSpawn.id) return activeSpawn;
         if (id === expiredSpawn.id) return expiredSpawn;

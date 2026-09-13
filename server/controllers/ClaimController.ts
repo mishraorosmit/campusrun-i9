@@ -40,9 +40,10 @@ export class ClaimController {
       // Support validateOnly pre-flight if explicitly requested or configured
       const isValidateOnly =
         this.defaultValidateOnly ||
-        req.query.validateOnly === 'true' ||
-        req.headers['x-validate-only'] === 'true' ||
-        req.body.validateOnly === true;
+        req.query?.validateOnly === 'true' ||
+        req.headers?.['x-validate-only'] === 'true' ||
+        req.body?.validateOnly === true;
+
 
       if (isValidateOnly && this.validateClaimUseCase) {
         const result = await this.validateClaimUseCase.execute({
@@ -64,7 +65,7 @@ export class ClaimController {
         playerCoordinates: playerCoordinates as any,
       });
 
-      res.status(200).json({
+      res.status(201).json({
         success: true,
         data: result,
       });

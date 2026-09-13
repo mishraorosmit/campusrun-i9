@@ -64,6 +64,10 @@ class TransactionalClaimRepository implements IClaimRepository {
     return true; // 1 row inserted
   }
 
+  async hasClaimed(spawnId: string, playerId: string): Promise<boolean> {
+    return this.uniqueConstraints.has(`${playerId}:${spawnId}`);
+  }
+
   async findById(id: string): Promise<Claim | null> {
     return this.claims.get(id) || null;
   }
@@ -116,6 +120,10 @@ class TransactionalPlayerRepository implements IPlayerRepository {
 
 class FakeSpawnRepository implements ISpawnRepository {
   constructor(private spawn: SpawnPoint) {}
+  async create(s: SpawnPoint): Promise<SpawnPoint> { return s; }
+  async update(s: SpawnPoint): Promise<SpawnPoint> { return s; }
+  async findAll(): Promise<SpawnPoint[]> { return [this.spawn]; }
+  async findAvailableForBatch(): Promise<SpawnPoint[]> { return [this.spawn]; }
   async findById(): Promise<SpawnPoint | null> { return this.spawn; }
   async findByCode(): Promise<SpawnPoint | null> { return this.spawn; }
   async findActive(): Promise<SpawnPoint[]> { return [this.spawn]; }

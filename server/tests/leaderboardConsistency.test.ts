@@ -64,6 +64,10 @@ describe('Leaderboard Consistency & Weekly Reset Rules', () => {
     });
 
     spawnRepo = {
+      create: async (s: any) => s,
+      update: async (s: any) => s,
+      findAll: async () => [spawn],
+      findAvailableForBatch: async () => [spawn],
       findById: async () => spawn,
       findByCode: async () => spawn,
       findActive: async () => [spawn],
@@ -108,6 +112,7 @@ describe('Leaderboard Consistency & Weekly Reset Rules', () => {
 
     claimRepo = {
       countBySpawnAndPlayer: async (sId, pId) => (uniqueClaimKeys.has(`${pId}:${sId}`) ? 1 : 0),
+      hasClaimed: async (sId, pId) => uniqueClaimKeys.has(`${pId}:${sId}`),
       saveTx: async (claim) => {
         const key = `${claim.playerId}:${claim.spawnId}`;
         if (uniqueClaimKeys.has(key)) return false;
