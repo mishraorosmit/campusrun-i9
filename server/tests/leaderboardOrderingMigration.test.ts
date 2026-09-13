@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 describe('Leaderboard Ordering Database Migration', () => {
   const migrationPath = path.resolve(
     __dirname,
-    '../infrastructure/database/migrations/sql/20260913000006_add_leaderboard_ordering_indexes.sql'
+    '../infrastructure/database/migrations/sql/20260913000007_add_leaderboard_ordering_indexes.sql'
   );
 
   it('should have the migration SQL file present and readable', () => {

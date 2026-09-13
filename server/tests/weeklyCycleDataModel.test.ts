@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 describe('Weekly Cycle Data Model and Migration', () => {
   const migrationPath = path.resolve(
     __dirname,
-    '../infrastructure/database/migrations/sql/20260913000007_create_weekly_cycle_models.sql'
+    '../infrastructure/database/migrations/sql/20260913000010_create_weekly_cycle_models.sql'
   );
 
   it('should have the migration SQL file present and readable', () => {

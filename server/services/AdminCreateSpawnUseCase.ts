@@ -50,10 +50,11 @@ export class AdminCreateSpawnUseCase {
     }
 
     // 3. Validate name / title
-    if (!input.name || typeof input.name !== 'string' || input.name.trim().length === 0) {
+    const spawnName = (input.name || (input as any).title || '').trim();
+    if (!spawnName) {
       throw new ValidationError('Spawn name is required and cannot be empty.');
     }
-    if (input.name.trim().length > 100) {
+    if (spawnName.length > 100) {
       throw new ValidationError('Spawn name cannot exceed 100 characters.');
     }
 
@@ -111,7 +112,7 @@ export class AdminCreateSpawnUseCase {
     // 9. Construct validated SpawnPoint domain entity
     const spawn = SpawnPoint.create({
       code,
-      title: input.name.trim(),
+      title: spawnName,
       description: input.description,
       clue: input.clue,
       coordinates: validatedCoords,

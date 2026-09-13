@@ -88,8 +88,8 @@ export class PostgresWeeklyCycleRepository implements IWeeklyCycleRepository {
       created_at: Date;
       completed_at: Date | null;
     }>(`
-      INSERT INTO weekly_cycles (starts_at, ends_at, status)
-      VALUES ($1, $2, $3)
+      INSERT INTO weekly_cycles (starts_at, ends_at, status, cycle_number)
+      VALUES ($1, $2, $3, COALESCE((SELECT MAX(cycle_number) FROM weekly_cycles), 0) + 1)
       RETURNING id, starts_at, ends_at, status, created_at, completed_at;
     `, [cycle.startsAt, cycle.endsAt, cycle.status]);
 
@@ -119,8 +119,8 @@ export class PostgresWeeklyCycleRepository implements IWeeklyCycleRepository {
       created_at: Date;
       completed_at: Date | null;
     }>(`
-      INSERT INTO weekly_cycles (starts_at, ends_at, status)
-      VALUES ($1, $2, $3)
+      INSERT INTO weekly_cycles (starts_at, ends_at, status, cycle_number)
+      VALUES ($1, $2, $3, COALESCE((SELECT MAX(cycle_number) FROM weekly_cycles), 0) + 1)
       RETURNING id, starts_at, ends_at, status, created_at, completed_at;
     `, [cycle.startsAt, cycle.endsAt, cycle.status]);
 

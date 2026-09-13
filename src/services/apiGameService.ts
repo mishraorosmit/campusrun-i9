@@ -98,23 +98,22 @@ export class ApiGameService implements IGameService {
 
   async getActiveRotation(): Promise<RotationState> {
     try {
-      const res = await this.authFetch(`${API_BASE}/admin/rotation/config`);
+      const res = await this.authFetch(`${API_BASE}/game/rotation`);
       if (res.ok) {
         const json = await res.json();
-        const nextTime = json.data?.nextRotationTime ? new Date(json.data.nextRotationTime).getTime() : Date.now() + 45 * 60000;
-        const now = Date.now();
-        const remaining = Math.max(0, Math.round((nextTime - now) / 1000));
-
-        return {
-          rotationId: 'rot-1',
-          rotationNumber: 1,
-          startedAt: new Date(nextTime - (json.data?.intervalMinutes || 45) * 60000).toISOString(),
-          endsAt: new Date(nextTime).toISOString(),
-          totalActiveSpawns: json.data?.concurrentActivePoints || 15,
-          totalSpawnPointsPool: 36,
-          status: 'active',
-          nextRotationInSeconds: remaining,
-        };
+        const d = json.data;
+        if (d) {
+          return {
+            rotationId: d.id || 'rot-1',
+            rotationNumber: d.rotationNumber || 1,
+            startedAt: d.startedAt || new Date().toISOString(),
+            endsAt: d.expiresAt || new Date(Date.now() + 45 * 60000).toISOString(),
+            totalActiveSpawns: d.activeSpawns || 15,
+            totalSpawnPointsPool: d.totalSpawns || 36,
+            status: 'active',
+            nextRotationInSeconds: d.nextRotationInSeconds ?? 2700,
+          };
+        }
       }
     } catch {
       // fallback

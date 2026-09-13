@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { ISpawnRepository } from '../repositories/ISpawnRepository';
 import { IPlayerRepository } from '../repositories/IPlayerRepository';
 import { IClaimRepository } from '../repositories/IClaimRepository';
@@ -81,7 +82,7 @@ export class ClaimSpawnUseCase {
     }
 
     // 6. Create claim entity
-    const claimId = `claim_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const claimId = randomUUID();
     const claim = new Claim({
       id: claimId,
       spawnId: spawn.id,

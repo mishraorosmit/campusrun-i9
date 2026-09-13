@@ -259,9 +259,9 @@ export class PostgresSpawnRepository implements ISpawnRepository {
     await client.query(
       `INSERT INTO spawn_points (
         id, code, batch_id, title, description, clue, tier, points, claim_radius_meters,
-        lat, lng, svg_x, svg_y, status, enabled, claim_count, max_claims, created_at, updated_at
+        location, svg_x, svg_y, status, enabled, claim_count, max_claims, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, point($10, $11), $12, $13, $14, $15, $16, $17, $18, $19
       )`,
       [
         spawn.id,
@@ -273,8 +273,8 @@ export class PostgresSpawnRepository implements ISpawnRepository {
         spawn.props.tier,
         spawn.points,
         spawn.claimRadiusMeters,
-        spawn.coordinates.lat,
         spawn.coordinates.lng,
+        spawn.coordinates.lat,
         spawn.props.svgCoordinates.x,
         spawn.props.svgCoordinates.y,
         spawn.status,
@@ -293,7 +293,7 @@ export class PostgresSpawnRepository implements ISpawnRepository {
     await client.query(
       `UPDATE spawn_points SET
         title = $2, description = $3, clue = $4, tier = $5, points = $6,
-        claim_radius_meters = $7, lat = $8, lng = $9, svg_x = $10, svg_y = $11,
+        claim_radius_meters = $7, location = point($8, $9), svg_x = $10, svg_y = $11,
         status = $12, enabled = $13, updated_at = NOW()
        WHERE id = $1`,
       [
@@ -304,8 +304,8 @@ export class PostgresSpawnRepository implements ISpawnRepository {
         spawn.props.tier,
         spawn.points,
         spawn.claimRadiusMeters,
-        spawn.coordinates.lat,
         spawn.coordinates.lng,
+        spawn.coordinates.lat,
         spawn.props.svgCoordinates.x,
         spawn.props.svgCoordinates.y,
         spawn.status,

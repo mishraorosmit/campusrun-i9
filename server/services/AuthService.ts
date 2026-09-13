@@ -339,6 +339,12 @@ export class AuthService {
         lastActiveAt: new Date(),
       });
       await this.playerRepo.save(player);
+    } else if (player.role !== role) {
+      player = new Player({
+        ...player.props,
+        role,
+      });
+      await this.playerRepo.save(player);
     }
     return this.createSessionTokens(player);
   }

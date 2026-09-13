@@ -74,8 +74,8 @@ export const AdminCreateSpawnSchema: ValidationSchema = {
   rules: [
     {
       field: 'name',
-      validate: (val) => SchemaValidator.isNonEmptyString(val),
-      message: 'name is required and must be a non-empty string',
+      validate: (val, body) => SchemaValidator.isNonEmptyString(val) || SchemaValidator.isNonEmptyString(body?.title),
+      message: 'name or title is required and must be a non-empty string',
     },
     {
       field: 'points',
@@ -112,8 +112,8 @@ export const AdminEditSpawnSchema: ValidationSchema = {
   rules: [
     {
       field: 'name',
-      validate: (val) => val === undefined || SchemaValidator.isNonEmptyString(val),
-      message: 'name must be a non-empty string if provided',
+      validate: (val, body) => val === undefined || SchemaValidator.isNonEmptyString(val) || SchemaValidator.isNonEmptyString(body?.title),
+      message: 'name or title must be a non-empty string if provided',
     },
     {
       field: 'points',

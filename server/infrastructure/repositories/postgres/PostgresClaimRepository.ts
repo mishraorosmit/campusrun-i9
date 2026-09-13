@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { IClaimRepository } from '../../../repositories/IClaimRepository';
 import { Claim } from '../../../domain/entities/Claim';
 import { ITransactionContext } from '../../../repositories/ITransactionManager';
@@ -5,18 +6,29 @@ import { ITransactionContext } from '../../../repositories/ITransactionManager';
 export class PostgresClaimRepository implements IClaimRepository {
   constructor(private readonly pool: import('pg').Pool) {}
 
+  private sanitizeId(id?: string): string {
+    if (id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return id;
+    }
+    return randomUUID();
+  }
+
   async saveTx(claim: Claim, tx: ITransactionContext): Promise<boolean> {
+    const validId = this.sanitizeId(claim.id);
+    const batchId = (claim as any).batchId || (claim.props as any).batchId || null;
     const res = await tx.query(`
       INSERT INTO claims (
         id, player_id, spawn_id, batch_id, points_awarded, streak_multiplier, distance_meters, player_location, claimed_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, ST_MakePoint($8, $9), $10
+        $1, $2, $3, 
+        COALESCE($4, (SELECT batch_id FROM spawn_points WHERE id = $3), (SELECT id FROM spawn_batches WHERE is_active = true LIMIT 1), (SELECT id FROM spawn_batches ORDER BY created_at DESC LIMIT 1)),
+        $5, $6, $7, point($8, $9), $10
       ) ON CONFLICT (player_id, spawn_id) DO NOTHING
     `, [
-      claim.id,
+      validId,
       claim.playerId,
       claim.spawnId,
-      '00000000-0000-0000-0000-000000000000', // fallback if empty since it's required in schema
+      batchId,
       claim.pointsAwarded,
       1.0, // default multiplier
       claim.props.distanceAtClaimMeters,
@@ -133,17 +145,21 @@ export class PostgresClaimRepository implements IClaimRepository {
   }
 
   async save(claim: Claim): Promise<void> {
+    const validId = this.sanitizeId(claim.id);
+    const batchId = (claim as any).batchId || (claim.props as any).batchId || null;
     await this.pool.query(
       `INSERT INTO claims (
         id, player_id, spawn_id, batch_id, points_awarded, streak_multiplier, distance_meters, player_location, claimed_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, ST_MakePoint($8, $9), $10
+        $1, $2, $3, 
+        COALESCE($4, (SELECT batch_id FROM spawn_points WHERE id = $3), (SELECT id FROM spawn_batches WHERE is_active = true LIMIT 1), (SELECT id FROM spawn_batches ORDER BY created_at DESC LIMIT 1)),
+        $5, $6, $7, point($8, $9), $10
       ) ON CONFLICT (player_id, spawn_id) DO NOTHING`,
       [
-        claim.id,
+        validId,
         claim.playerId,
         claim.spawnId,
-        '00000000-0000-0000-0000-000000000000',
+        batchId,
         claim.pointsAwarded,
         1.0,
         claim.props.distanceAtClaimMeters,

@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { DatabasePool, dbPool } from './pool';
 import { validateEnvironment } from '../../config/env';
 import { PostgresSpawnRepository } from '../repositories/postgres/PostgresSpawnRepository';
