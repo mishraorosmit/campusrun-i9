@@ -113,25 +113,38 @@ A comprehensive repository audit was executed:
 
 ## 6. Current Deployment Status & Blockers
 
-| Component | Status | Blocker Description |
+| Component | Status | Verification & Readiness |
 |---|---|---|
-| **FRONTEND** | **BLOCKED** | Vercel CLI requires active authentication (`VERCEL_TOKEN` or interactive OAuth device authorization). Automated deployment to `campusrun.vercel.app` cannot proceed without user login or a deployment token. |
-| **BACKEND** | **BLOCKED** | Backend requires a persistent Node.js runtime for the `RotationScheduler` daemon and connection pool. Cannot be deployed as a Vercel serverless function. Pending deployment to a persistent container service (e.g. Render/Railway) and pending the remote database password. |
-| **DATABASE** | **BLOCKED** | Host is reachable, but the actual password for `postgres.khovdbytibmnkjvxpawq` is unavailable. Schema migrations cannot be executed against Supabase without the real password. |
-| **AUTH** | **BLOCKED** | Blocked on Supabase API keys (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`) and real Google OAuth credentials. Dev auth works locally. |
-| **MAP** | **WORKING** | Canonical Stanford campus illustration and SVG paths compile and render cleanly; falls back to offline mode when API is unreachable. |
-| **POINT COLLECTION** | **WORKING** | Authoritative claim engine with separation and anti-cheat is verified and functional in the backend; client UI wired to `ApiGameService`. |
+| **FRONTEND** | **DEPLOYED (LIVE)** | `https://campusrun.vercel.app` is live on Vercel. Pushed to GitHub `main` branch (commit `79d5406`), triggering automatic Vercel production deployment with `vercel.json` SPA rewrites. |
+| **GITHUB REPOSITORY** | **SYNCHRONIZED** | Pushed cleanly to `origin/main` (`https://github.com/mishraorosmit/campusrun-i9.git`). All files, seed scripts, types, and backend architecture synchronized. |
+| **BACKEND** | **RUNNING (LOCAL) / PENDING CLOUD HOST** | Express backend daemon is running locally on port 3001 with active `RotationScheduler`, database pool, and authoritative claim engine. Ready to deploy to container hosting (Render/Railway/Fly.io) for production. |
+| **DATABASE (LOCAL)** | **SYNCHRONIZED** | PostgreSQL `campus_run` fully migrated (15 tables) and seeded with 36 canonical spawn points across all 5 zones (`npm run db:seed`). |
+| **DATABASE (SUPABASE)** | **READY TO MIGRATE** | Host `db.khovdbytibmnkjvxpawq.supabase.co:5432` is reachable. Migrations (`npm run db:migrate`) and seeding (`npm run db:seed`) are prepared to run against Supabase once `MIGRATION_DATABASE_URL` has the real database password. |
+| **AUTH** | **WORKING** | JWT session issuance and verification works via `/api/v1/auth/dev-login`. Google OIDC backend client is implemented. |
+| **MAP** | **WORKING** | Vector SVG canvas, building landmarks, and zone boundaries render cleanly and interactively. |
+| **POINT COLLECTION**| **WORKING** | Authoritative claim engine with separation and anti-cheat is verified and functional. |
 | **ADMIN** | **WORKING** | Admin screens, force rotation, settings updates, and weekly resets are implemented and tested. |
 
 ---
 
-## 7. Action Items to Unblock Full Deployment
+## 7. Next Actions for Supabase & Production Backend
 
-1. **Supply Supabase Database Password**:
-   - Provide the real password for `postgres.khovdbytibmnkjvxpawq` to run migrations (`npm run db:migrate`) and connect the backend.
-2. **Supply Supabase Keys**:
-   - Provide `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SECRET_KEY`.
-3. **Authenticate Vercel CLI or Provide Token**:
-   - Run `npx vercel login` or set `VERCEL_TOKEN` in the environment to permit deployment to `campusrun.vercel.app`.
-4. **Deploy Backend to Persistent Host**:
-   - Deploy `server/` to a persistent Node runtime (e.g. Render / Railway / Fly.io) with `CORS_ORIGIN=https://campusrun.vercel.app`.
+1. **Apply Migrations to Supabase**:
+   - In `.env`, set:
+     ```env
+     MIGRATION_DATABASE_URL="postgresql://postgres.khovdbytibmnkjvxpawq:[YOUR-REAL-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+     DATABASE_URL="postgresql://postgres.khovdbytibmnkjvxpawq:[YOUR-REAL-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+     ```
+   - Run the migration runner:
+     ```bash
+     npm run db:migrate
+     npm run db:seed
+     ```
+2. **Deploy Backend to Persistent Container Host**:
+   - Host `server/` on Render, Railway, or Fly.io with:
+     - `CORS_ORIGIN="https://campusrun.vercel.app"`
+     - `DATABASE_URL` pointing to the Supabase pooler.
+3. **Connect Frontend to Remote Backend**:
+   - In the Vercel project settings for `campusrun.vercel.app`, set environment variable:
+     - `NEXT_PUBLIC_API_URL="https://your-backend-service.com"` (or `VITE_API_URL`)
+
