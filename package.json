@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "server": "tsx server/index.ts",
     "server:dev": "tsx watch server/index.ts",
-    "db:migrate": "tsx server/infrastructure/database/migrations/cli.ts"
+    "db:migrate": "tsx server/infrastructure/database/migrations/cli.ts",
+    "db:seed": "tsx server/infrastructure/database/seedSpawns.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
