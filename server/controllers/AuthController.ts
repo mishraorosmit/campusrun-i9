@@ -156,6 +156,33 @@ export class AuthController {
     res.json({ user: req.user });
   };
 
+  /**
+   * POST /api/v1/auth/dev-login
+   * Issues JWT token for development and local testing.
+   */
+  public devLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (process.env.NODE_ENV === 'production') {
+        throw new UnauthorizedError('Dev login is disabled in production environment');
+      }
+
+      const role = (req.body?.role || 'STUDENT').toUpperCase() === 'ADMIN' ? 'ADMIN' : 'STUDENT';
+      const email = req.body?.email || (role === 'ADMIN' ? 'admin@campus.edu' : 'student@campus.edu');
+
+      const tokens = await this.authService.createDevSession(email, role);
+      this.setRefreshTokenCookie(res, tokens.refreshToken, tokens.expiresIn);
+
+      res.json({
+        success: true,
+        accessToken: tokens.accessToken,
+        expiresIn: tokens.expiresIn,
+        user: tokens.user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   private setRefreshTokenCookie(res: Response, refreshToken: string, maxAgeSeconds: number): void {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,

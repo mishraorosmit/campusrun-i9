@@ -66,8 +66,14 @@ export function validateEnvironment(env: NodeJS.ProcessEnv = process.env): Valid
   // APP_URL
   const appUrl = env.APP_URL || 'http://localhost:3000';
 
-  // CORS_ORIGIN
-  const corsOrigin = env.CORS_ORIGIN || '*';
+  // CORS_ORIGIN (wildcard prohibited in production)
+  const isProd = nodeEnv === 'production';
+  let corsOrigin = env.CORS_ORIGIN;
+  if (!corsOrigin) {
+    corsOrigin = isProd ? 'https://campusrun.vercel.app' : '*';
+  } else if (isProd && corsOrigin === '*') {
+    corsOrigin = 'https://campusrun.vercel.app';
+  }
 
   // Database Connection URL (Defaults to dedicated i9_app_user)
   const databaseUrl =

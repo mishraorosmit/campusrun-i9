@@ -5,6 +5,21 @@ export interface IDomainEvent<T = unknown> {
   readonly payload: T;
 }
 
+export interface ClaimSuccessPayload {
+  claimId: string;
+  spawnId: string;
+  spawnName: string;
+  spawnCode: string;
+  playerId: string;
+  pointsAwarded: number;
+  weeklyPoints: number;
+  allTimePoints: number;
+  claimedAt: Date;
+  distanceMeters: number;
+  weeklyRank?: number | null;
+  playerCoordinates?: { lat: number; lng: number };
+}
+
 export interface SpawnClaimedPayload {
   claimId: string;
   spawnId: string;

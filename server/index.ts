@@ -14,6 +14,13 @@ dbPool.initialize({
 
 const app = createApp();
 
+const rotationScheduler = app.get('rotationScheduler');
+if (rotationScheduler && typeof rotationScheduler.start === 'function') {
+  rotationScheduler.start().catch((err: any) => {
+    console.error('[I9 Server] Failed to start rotation scheduler:', err);
+  });
+}
+
 const server = app.listen(config.PORT, () => {
   console.log('====================================================');
   console.log(`  Project I9 Backend — Active & Ready`);
@@ -27,6 +34,11 @@ const server = app.listen(config.PORT, () => {
 // Graceful Shutdown
 async function handleShutdown(signal: string) {
   console.log(`[I9 Server] Received ${signal}. Shutting down gracefully...`);
+
+  if (rotationScheduler && typeof rotationScheduler.stop === 'function') {
+    rotationScheduler.stop();
+    console.log('[I9 Server] Rotation scheduler stopped.');
+  }
 
   // Stop accepting new HTTP requests
   server.close(async () => {

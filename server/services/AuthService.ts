@@ -314,4 +314,31 @@ export class AuthService {
 
     return candidate;
   }
+
+  /**
+   * Generates development session tokens for local integration testing.
+   */
+  public async createDevSession(email: string, role: 'STUDENT' | 'ADMIN'): Promise<AuthTokens> {
+    let player = await this.playerRepo.findByEmail(email);
+    if (!player) {
+      const username = await this.generateUniqueUsername(email.split('@')[0]);
+      player = new Player({
+        id: crypto.randomUUID(),
+        email,
+        username,
+        role,
+        totalPoints: 0,
+        seasonPoints: 0,
+        rank: 1,
+        tier: 'tier1',
+        claimsCount: 0,
+        currentStreakDays: 0,
+        status: 'active',
+        createdAt: new Date(),
+        lastActiveAt: new Date(),
+      });
+      await this.playerRepo.save(player);
+    }
+    return this.createSessionTokens(player);
+  }
 }

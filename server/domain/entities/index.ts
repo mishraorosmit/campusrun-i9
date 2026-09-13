@@ -1,4 +1,5 @@
 export * from './SpawnPoint';
+export * from './SpawnBatch';
 export * from './Player';
 export * from './Claim';
 export * from './CampusZone';

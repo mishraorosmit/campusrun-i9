@@ -44,6 +44,12 @@ export class SchemaValidator {
     return false;
   }
 
+  public static isPositiveInteger(val: unknown): boolean {
+    if (!SchemaValidator.isNumber(val)) return false;
+    const num = Number(val);
+    return Number.isInteger(num) && num > 0;
+  }
+
   public static isLatitude(val: unknown): boolean {
     if (!SchemaValidator.isNumber(val)) return false;
     const num = Number(val);

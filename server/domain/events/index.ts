@@ -1,10 +1,21 @@
 import {
   IDomainEvent,
+  ClaimSuccessPayload,
   SpawnClaimedPayload,
   RotationTriggeredPayload,
   PlayerStreakUpdatedPayload,
   LeaderboardResetPayload,
 } from './IDomainEvent';
+
+export class ClaimSuccessEvent implements IDomainEvent<ClaimSuccessPayload> {
+  public readonly eventName = 'CLAIM_SUCCESS';
+  public readonly occurredAt = new Date();
+  public readonly eventId: string;
+
+  constructor(public readonly payload: ClaimSuccessPayload) {
+    this.eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+}
 
 export class SpawnClaimedEvent implements IDomainEvent<SpawnClaimedPayload> {
   public readonly eventName = 'SPAWN_CLAIMED';

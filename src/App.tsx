@@ -20,7 +20,7 @@ import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { ToastContainer } from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
 import { useGeoLocation } from './hooks/useGeoLocation';
-import { gameService } from './services/mockGameService';
+import { apiGameService as gameService } from './services/apiGameService';
 import { LoadingState } from './components/ui/LoadingState';
 import { ClaimResult } from './services/types';
 
@@ -29,6 +29,10 @@ export default function App() {
   const [currentMode, setCurrentMode] = useState<'player' | 'admin'>('player');
   const [activePlayerTab, setActivePlayerTab] = useState<PlayerNavTab>('map');
   const [activeAdminTab, setActiveAdminTab] = useState<AdminNavTab>('overview');
+
+  useEffect(() => {
+    gameService.setRole(currentMode);
+  }, [currentMode]);
 
   // Game State
   const [spawns, setSpawns] = useState<SpawnPoint[]>([]);
