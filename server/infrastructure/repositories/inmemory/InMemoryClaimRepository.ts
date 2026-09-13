@@ -16,14 +16,21 @@ export class InMemoryClaimRepository implements IClaimRepository {
       .slice(0, limit);
   }
 
-  async countBySpawnAndPlayer(spawnId: string, playerId: string): Promise<number> {
+  async countBySpawnAndPlayer(spawnId: string, playerId: string, batchId?: string): Promise<number> {
     let count = 0;
     for (const claim of this.claims.values()) {
       if (claim.spawnId === spawnId && claim.playerId === playerId) {
-        count++;
+        if (!batchId || (claim as any).batchId === batchId) {
+          count++;
+        }
       }
     }
     return count;
+  }
+
+  async hasClaimed(spawnId: string, playerId: string, batchId?: string): Promise<boolean> {
+    const count = await this.countBySpawnAndPlayer(spawnId, playerId, batchId);
+    return count > 0;
   }
 
   async save(claim: Claim): Promise<void> {

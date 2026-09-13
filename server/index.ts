@@ -40,6 +40,15 @@ const weeklyResetScheduler = new WeeklyResetScheduler(weeklyCycleRepo, resetWeek
   autoStart: config.NODE_ENV !== 'test',
 });
 
+// 3. Start Rotation Scheduler (if registered by app composition root)
+// TODO: MERGE CONFLICT - remote uses app.get('rotationScheduler'); integrated if present
+const rotationScheduler = app.get('rotationScheduler');
+if (rotationScheduler && typeof rotationScheduler.start === 'function') {
+  rotationScheduler.start().catch((err: any) => {
+    console.error('[I9 Server] Failed to start rotation scheduler:', err);
+  });
+}
+
 export const server = httpServer.listen(config.PORT, () => {
   console.log('====================================================');
   console.log(`  Project I9 Backend — Active & Ready`);
@@ -58,6 +67,12 @@ async function handleShutdown(signal: string) {
 
   // Stop background scheduler
   weeklyResetScheduler.stop();
+
+  // Stop rotation scheduler if present
+  if (rotationScheduler && typeof rotationScheduler.stop === 'function') {
+    rotationScheduler.stop();
+    console.log('[I9 Server] Rotation scheduler stopped.');
+  }
 
   // Close Socket.IO server
   await closeSocketServer();

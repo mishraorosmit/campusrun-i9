@@ -40,6 +40,11 @@ export interface SpawnSummaryDTO {
   claimRadiusMeters: number;
   coordinates: Coordinates;
   svgCoordinates: { x: number; y: number };
+  lat?: number;
+  lng?: number;
+  svgX?: number;
+  svgY?: number;
+  zoneId?: string;
   zoneName: string;
   expiresAt: string;
 }
@@ -52,6 +57,10 @@ export interface CampusZoneDTO {
   svgPath: string;
   centerCoordinates: Coordinates;
   centerSvgCoordinates: { x: number; y: number };
+  centerLat?: number;
+  centerLng?: number;
+  centerSvgX?: number;
+  centerSvgY?: number;
   activeSpawnsCount: number;
   totalPointsAvailable: number;
   color?: string;

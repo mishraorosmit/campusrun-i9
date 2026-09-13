@@ -9,7 +9,7 @@ import {
   LeaderboardResetSchedule,
   HeatmapPoint,
 } from '../../types';
-import { gameService } from '../../services/mockGameService';
+import { apiGameService as gameService } from '../../services/apiGameService';
 import { AdminOverviewTab } from './AdminOverviewTab';
 import { AdminPointsTab } from './AdminPointsTab';
 import { AdminRotateTab } from './AdminRotateTab';

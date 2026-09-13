@@ -9,6 +9,7 @@ import { createApiRouter } from './routes';
 // Repositories (In-Memory Adapters for Phase 02/03 skeleton)
 import {
   InMemorySpawnRepository,
+  InMemoryBatchRepository,
   InMemoryPlayerRepository,
   InMemoryClaimRepository,
   InMemoryZoneRepository,
@@ -19,21 +20,25 @@ import {
   InMemoryPushSubscriptionRepository,
   InMemoryAnalyticsRepository,
   PostgresSpawnRepository,
+  PostgresBatchRepository,
   PostgresPlayerRepository,
   PostgresNotificationRepository,
   PostgresPushSubscriptionRepository,
   PostgresAnalyticsRepository,
   PostgresAuditService,
   InMemoryAuditService,
+  PostgresGeospatialService,
+  dbPool,
   geoCalculator,
 } from './infrastructure';
 
 // PostgreSQL transaction support
 import { TransactionManager, InMemoryTransactionManager } from './infrastructure/database/transaction';
-import { dbPool } from './infrastructure/database/pool';
+import { dbPool as dbPoolInstance } from './infrastructure/database/pool';
 import { PostgresClaimRepository } from './infrastructure/repositories/postgres/PostgresClaimRepository';
 import { PostgresLeaderboardRepository } from './infrastructure/repositories/postgres/PostgresLeaderboardRepository';
 import { PostgresWeeklyCycleRepository } from './infrastructure/repositories/postgres/PostgresWeeklyCycleRepository';
+import { PostgresZoneRepository } from './infrastructure/repositories/postgres/PostgresZoneRepository';
 
 // Google OIDC Client
 import { GoogleOidcClient } from './infrastructure/auth/GoogleOidcClient';
@@ -52,22 +57,35 @@ import {
 // Use Cases & Services
 import {
   ClaimSpawnUseCase,
+  ValidateClaimUseCase,
   GetActiveSpawnsUseCase,
   GetSpawnByIdUseCase,
+  ListSpawnsUseCase,
+  AdminCreateSpawnUseCase,
+  AdminEditSpawnUseCase,
+  AdminManageSpawnsUseCase,
   RotateSpawnsUseCase,
   GetLeaderboardUseCase,
   GetPlayerProfileUseCase,
   GetClaimsHistoryUseCase,
   GetZonesUseCase,
-  GetZoneByIdUseCase,
   GetAdminOverviewUseCase,
-  AdminManageSpawnsUseCase,
   ResetWeeklyLeaderboardUseCase,
   WeeklyCycleService,
   GetNextWeeklyResetUseCase,
   ResetWeeklyCycleUseCase,
   AuthService,
   IAuditService,
+  IGeospatialService,
+  GameSettingsService,
+  GenerateBatchUseCase,
+  ActivateBatchUseCase,
+  ExpireBatchUseCase,
+  GetBatchByIdUseCase,
+  IRotationService,
+  RotationService,
+  IRotationScheduler,
+  RotationScheduler,
   UpdatePlayerPreferencesUseCase,
   GetPlayerStatsUseCase,
   GetPlayerNotificationsUseCase,
@@ -100,9 +118,12 @@ import {
 
 import {
   ISpawnRepository,
+  IBatchRepository,
+  IPlayerRepository,
+  IClaimRepository,
+  IZoneRepository,
   ILeaderboardRepository,
   IWeeklyCycleRepository,
-  IPlayerRepository,
   INotificationRepository,
   IPushSubscriptionRepository,
   IAnalyticsRepository,
@@ -111,20 +132,26 @@ import {
 
 export interface AppDependencies {
   spawnRepo?: ISpawnRepository;
+  batchRepo?: IBatchRepository;
   playerRepo?: IPlayerRepository;
-  claimRepo?: InMemoryClaimRepository;
-  zoneRepo?: InMemoryZoneRepository;
+  claimRepo?: IClaimRepository;
+  zoneRepo?: IZoneRepository;
   rotationRepo?: IRotationRepository;
   leaderboardRepo?: ILeaderboardRepository;
   weeklyCycleRepo?: IWeeklyCycleRepository;
   notificationRepo?: INotificationRepository;
   pushSubscriptionRepo?: IPushSubscriptionRepository;
-  pushDeliveryService?: PushDeliveryService;
   analyticsRepo?: IAnalyticsRepository;
+  pushDeliveryService?: PushDeliveryService;
   oidcClient?: GoogleOidcClient;
   auditService?: IAuditService;
+  geoService?: IGeospatialService;
   realtimeService?: IRealtimeService;
+  rotationService?: IRotationService;
+  rotationScheduler?: IRotationScheduler;
+  claimSpawnUseCase?: ClaimSpawnUseCase;
   eventBus?: IEventBus;
+  validateOnlyClaims?: boolean;
 }
 
 export function createApp(deps: AppDependencies = {}): Express {
@@ -157,9 +184,14 @@ export function createApp(deps: AppDependencies = {}): Express {
   const getPool = () => (dbPool.isInitialized() ? dbPool.getPool() : (null as any));
 
   const spawnRepo = deps.spawnRepo || (isTest ? new InMemorySpawnRepository() : new PostgresSpawnRepository(getPool()));
+  const batchRepo =
+    deps.batchRepo ||
+    (isTest ? new InMemoryBatchRepository() : new PostgresBatchRepository());
   const playerRepo = deps.playerRepo || (isTest ? new InMemoryPlayerRepository() : new PostgresPlayerRepository(getPool()));
   const claimRepo = deps.claimRepo || new InMemoryClaimRepository();
-  const zoneRepo = deps.zoneRepo || new InMemoryZoneRepository();
+  const zoneRepo =
+    deps.zoneRepo ||
+    (isTest ? new InMemoryZoneRepository() : new PostgresZoneRepository(dbPool));
   const rotationRepo = deps.rotationRepo || new InMemoryRotationRepository();
   const leaderboardRepo = deps.leaderboardRepo || (isTest ? new InMemoryLeaderboardRepository() : new PostgresLeaderboardRepository(getPool()));
   const weeklyCycleRepo = deps.weeklyCycleRepo || (isTest ? new InMemoryWeeklyCycleRepository() : new PostgresWeeklyCycleRepository(getPool()));
@@ -178,9 +210,20 @@ export function createApp(deps: AppDependencies = {}): Express {
     (isTest
       ? new InMemoryAnalyticsRepository()
       : new PostgresAnalyticsRepository(getPool()));
+
   const oidcClient =
     deps.oidcClient ||
     new GoogleOidcClient(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_CALLBACK_URL);
+
+  // Geospatial Service
+  const geoService = deps.geoService || new PostgresGeospatialService(dbPool);
+
+  // Audit Service (Privileged administrative mutation logging)
+  const auditService =
+    deps.auditService ||
+    (isTest
+      ? new InMemoryAuditService()
+      : new PostgresAuditService());
 
   // Authentication Service
   const authService = new AuthService(oidcClient, playerRepo, {
@@ -197,18 +240,30 @@ export function createApp(deps: AppDependencies = {}): Express {
   const eBus = deps.eventBus || eventBus;
 
   // Use Cases (Orchestration layer)
-  const claimSpawnUseCase = new ClaimSpawnUseCase(
+  const validateClaimUseCase = new ValidateClaimUseCase(
     spawnRepo,
-    pgPlayerRepo,
-    pgClaimRepo,
-    leaderboardRepo,
-    geoCalculator,
-    eBus,
-    txManager,
-    rtService
+    batchRepo,
+    claimRepo,
+    geoService
   );
+  const claimSpawnUseCase =
+    deps.claimSpawnUseCase ||
+    new ClaimSpawnUseCase(
+      spawnRepo,
+      pgPlayerRepo,
+      pgClaimRepo,
+      leaderboardRepo,
+      geoCalculator,
+      eBus,
+      txManager,
+      rtService
+    );
   const getActiveSpawnsUseCase = new GetActiveSpawnsUseCase(spawnRepo);
   const getSpawnByIdUseCase = new GetSpawnByIdUseCase(spawnRepo);
+  const listSpawnsUseCase = new ListSpawnsUseCase(spawnRepo);
+  const adminCreateSpawnUseCase = new AdminCreateSpawnUseCase(spawnRepo, geoService, auditService);
+  const adminEditSpawnUseCase = new AdminEditSpawnUseCase(spawnRepo, geoService, auditService);
+
   const rotateSpawnsUseCase = new RotateSpawnsUseCase(
     rotationRepo,
     spawnRepo,
@@ -233,13 +288,34 @@ export function createApp(deps: AppDependencies = {}): Express {
   const getZonesUseCase = new GetZonesUseCase(zoneRepo);
   const getZoneByIdUseCase = new GetZoneByIdUseCase(zoneRepo);
   const getAdminOverviewUseCase = new GetAdminOverviewUseCase(spawnRepo, claimRepo);
-  const adminManageSpawnsUseCase = new AdminManageSpawnsUseCase(spawnRepo, rtService, eBus);
+  const adminManageSpawnsUseCase = new AdminManageSpawnsUseCase(spawnRepo, rtService, eBus, auditService);
   const resetWeeklyLeaderboardUseCase = new ResetWeeklyLeaderboardUseCase(leaderboardRepo);
   const weeklyCycleService = new WeeklyCycleService(weeklyCycleRepo, leaderboardRepo, txManager, rtService, eBus);
   const getNextWeeklyResetUseCase = new GetNextWeeklyResetUseCase(weeklyCycleService);
   const resetWeeklyCycleUseCase = new ResetWeeklyCycleUseCase(weeklyCycleService);
   const getGameStateUseCase = new GetGameStateUseCase(spawnRepo, weeklyCycleRepo);
   const getGameRotationUseCase = new GetGameRotationUseCase(rotationRepo, spawnRepo);
+
+  // Authoritative Batch Engine & Rotation Services
+  const gameSettingsService = new GameSettingsService(dbPool);
+  const generateBatchUseCase = new GenerateBatchUseCase(
+    batchRepo,
+    spawnRepo,
+    geoService,
+    gameSettingsService,
+    dbPool
+  );
+  const activateBatchUseCase = new ActivateBatchUseCase(batchRepo);
+  const expireBatchUseCase = new ExpireBatchUseCase(batchRepo);
+  const getBatchByIdUseCase = new GetBatchByIdUseCase(batchRepo);
+
+  const rotationService =
+    deps.rotationService ||
+    new RotationService(batchRepo, generateBatchUseCase, gameSettingsService, dbPool);
+
+  const rotationScheduler =
+    deps.rotationScheduler ||
+    new RotationScheduler(rotationService);
 
   // Internal Domain Event Handlers (Fan-out: Database Notifications, Socket.IO Realtime, Web Push, Analytics)
   const pushDeliveryService =
@@ -252,8 +328,13 @@ export function createApp(deps: AppDependencies = {}): Express {
   new AnalyticsHandler(eBus, analyticsRepo);
 
   // Controllers (Driving HTTP Adapters - ZERO repository dependencies)
-  const spawnController = new SpawnController(getActiveSpawnsUseCase, getSpawnByIdUseCase);
-  const claimController = new ClaimController(claimSpawnUseCase, getClaimsHistoryUseCase);
+  const spawnController = new SpawnController(getActiveSpawnsUseCase, getSpawnByIdUseCase, listSpawnsUseCase);
+  const claimController = new ClaimController(
+    claimSpawnUseCase,
+    getClaimsHistoryUseCase,
+    validateClaimUseCase,
+    deps.validateOnlyClaims || false
+  );
   const playerController = new PlayerController(
     getPlayerProfileUseCase,
     updatePlayerPreferencesUseCase,
@@ -268,7 +349,10 @@ export function createApp(deps: AppDependencies = {}): Express {
     getAdminOverviewUseCase,
     resetWeeklyLeaderboardUseCase,
     resetWeeklyCycleUseCase,
-    weeklyCycleRepo
+    weeklyCycleRepo,
+    adminCreateSpawnUseCase,
+    adminEditSpawnUseCase,
+    rotationService
   );
   const authController = new AuthController(authService);
   const weeklyCycleController = new WeeklyCycleController(getNextWeeklyResetUseCase);
@@ -287,12 +371,10 @@ export function createApp(deps: AppDependencies = {}): Express {
     getGameRotationUseCase
   );
 
-  // Audit Service (Privileged administrative mutation logging)
-  const auditService =
-    deps.auditService ||
-    (config.NODE_ENV === 'test' && playerRepo instanceof InMemoryPlayerRepository
-      ? new InMemoryAuditService()
-      : new PostgresAuditService());
+  app.set('rotationService', rotationService);
+  app.set('rotationScheduler', rotationScheduler);
+  app.set('batchRepo', batchRepo);
+  app.set('spawnRepo', spawnRepo);
 
   // 5. Mount API Routes under /api
   const apiRouter = createApiRouter({

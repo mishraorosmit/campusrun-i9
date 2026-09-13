@@ -2,6 +2,7 @@ import { Pool, PoolClient } from 'pg';
 import { dbPool } from './pool';
 import { ITransactionManager, ITransactionContext, IQueryResult } from '../../repositories/ITransactionManager';
 import { normalizeDatabaseError } from './errors';
+import { AppError } from '../../errors';
 
 export class TransactionManager implements ITransactionManager {
   public async runInTransaction<T>(work: (tx: ITransactionContext) => Promise<T>): Promise<T> {
@@ -36,7 +37,13 @@ export class TransactionManager implements ITransactionManager {
       } catch (rollbackErr) {
         console.error('[TransactionManager] Rollback failed:', rollbackErr);
       }
-      throw normalizeDatabaseError(err);
+      if (err instanceof AppError) {
+        throw err;
+      }
+      if (err && typeof err === 'object' && 'code' in err && typeof (err as any).code === 'string') {
+        throw normalizeDatabaseError(err);
+      }
+      throw err;
     } finally {
       client.release();
     }

@@ -25,5 +25,8 @@ export function createAuthRouter(controller: AuthController): Router {
   router.get('/session', requireAuthenticatedUser, controller.getMe);
   router.get('/me', requireAuthenticatedUser, controller.getMe);
 
+  // 7. Development Login Endpoint
+  router.post('/dev-login', controller.devLogin);
+
   return router;
 }

@@ -1,24 +1,72 @@
 import { ISpawnRepository } from '../repositories/ISpawnRepository';
 import { IRealtimeService } from './IRealtimeService';
 import { IEventBus } from '../events/IEventBus';
+import { IAuditService } from './IAuditService';
 import { SpawnExpiredEvent } from '../domain/events';
 import { NotFoundError } from '../errors';
+
+export interface ToggleSpawnResult {
+  id: string;
+  enabled: boolean;
+  previousEnabled: boolean;
+  idempotent: boolean;
+  batchId?: string | null;
+}
 
 export class AdminManageSpawnsUseCase {
   constructor(
     private readonly spawnRepo: ISpawnRepository,
     private readonly realtimeService?: IRealtimeService,
-    private readonly eventBus?: IEventBus
+    private readonly eventBus?: IEventBus,
+    private readonly auditService?: IAuditService
   ) {}
 
-  public async toggleSpawn(id: string, enabled: boolean): Promise<{ id: string; enabled: boolean }> {
+  public async toggleSpawn(
+    id: string,
+    enabled: boolean,
+    adminId?: string | null
+  ): Promise<ToggleSpawnResult> {
     const spawn = await this.spawnRepo.findById(id);
     if (!spawn) {
-      throw new NotFoundError(`Spawn point "${id}" not found`);
+      if (this.auditService) {
+        await this.auditService.log({
+          adminId: adminId || null,
+          action: 'SPAWN_TOGGLE',
+          targetEntity: 'spawn_points',
+          targetId: id,
+          details: { result: 'FAILED', reason: 'Spawn point not found', targetEnabled: enabled },
+          createdAt: new Date(),
+        });
+      }
+      throw new NotFoundError(`Spawn point "${id}" not found.`);
+    }
+
+    const previousEnabled = (spawn as any).isEnabled ?? enabled;
+
+    // Idempotent: If current state matches target state, return immediately
+    if (previousEnabled === enabled) {
+      if (this.auditService) {
+        await this.auditService.log({
+          adminId: adminId || null,
+          action: 'SPAWN_TOGGLE',
+          targetEntity: 'spawn_points',
+          targetId: id,
+          details: {
+            result: 'SUCCESS',
+            enabled,
+            previousEnabled,
+            idempotent: true,
+            note: 'State unchanged',
+          },
+          createdAt: new Date(),
+        });
+      }
+      return { id, enabled, previousEnabled, idempotent: true, batchId: (spawn as any).batchId };
     }
 
     await this.spawnRepo.updateStatus(id, spawn.status, enabled);
 
+    // Publish domain event on disable
     if (!enabled && this.eventBus) {
       try {
         await this.eventBus.publish(
@@ -36,6 +84,7 @@ export class AdminManageSpawnsUseCase {
       }
     }
 
+    // Realtime broadcast
     if (this.realtimeService) {
       if (!enabled) {
         this.realtimeService.broadcastSpawnsExpired({
@@ -67,7 +116,30 @@ export class AdminManageSpawnsUseCase {
       }
     }
 
-    return { id, enabled };
+    // Audit Logging
+    if (this.auditService) {
+      await this.auditService.log({
+        adminId: adminId || null,
+        action: 'SPAWN_TOGGLE',
+        targetEntity: 'spawn_points',
+        targetId: id,
+        details: {
+          result: 'SUCCESS',
+          enabled,
+          previousEnabled,
+          idempotent: false,
+          batchId: (spawn as any).batchId,
+        },
+        createdAt: new Date(),
+      });
+    }
+
+    return {
+      id,
+      enabled,
+      previousEnabled,
+      idempotent: false,
+      batchId: (spawn as any).batchId,
+    };
   }
 }
-

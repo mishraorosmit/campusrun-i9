@@ -1,12 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
 import { GetActiveSpawnsUseCase } from '../services/GetActiveSpawnsUseCase';
 import { GetSpawnByIdUseCase } from '../services/GetSpawnByIdUseCase';
+import { ListSpawnsUseCase } from '../services/ListSpawnsUseCase';
 
 export class SpawnController {
   constructor(
     private readonly getActiveSpawnsUseCase: GetActiveSpawnsUseCase,
-    private readonly getSpawnByIdUseCase: GetSpawnByIdUseCase
+    private readonly getSpawnByIdUseCase: GetSpawnByIdUseCase,
+    private readonly listSpawnsUseCase?: ListSpawnsUseCase
   ) {}
+
+  public listSpawns = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!this.listSpawnsUseCase) {
+        return this.getActiveSpawns(req, res, next);
+      }
+
+      const { status, enabled, batchId, tier, limit, offset } = req.query;
+
+      let parsedEnabled: boolean | undefined = undefined;
+      if (enabled !== undefined) {
+        parsedEnabled = String(enabled).toLowerCase() === 'true';
+      }
+
+      const spawns = await this.listSpawnsUseCase.execute({
+        status: status as string | undefined,
+        enabled: parsedEnabled,
+        batchId: batchId as string | undefined,
+        tier: tier as string | undefined,
+        limit: limit ? parseInt(limit as string, 10) : undefined,
+        offset: offset ? parseInt(offset as string, 10) : undefined,
+      });
+
+      res.json({
+        success: true,
+        data: spawns.map((s) => s.toJSON()),
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 
   public getActiveSpawns = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -23,7 +56,7 @@ export class SpawnController {
       const spawns = await this.getActiveSpawnsUseCase.execute(bounds);
       res.json({
         success: true,
-        data: spawns,
+        data: spawns.map((s) => s.toJSON()),
       });
     } catch (err) {
       next(err);
@@ -37,7 +70,7 @@ export class SpawnController {
 
       res.json({
         success: true,
-        data: spawn,
+        data: spawn.toJSON(),
       });
     } catch (err) {
       next(err);

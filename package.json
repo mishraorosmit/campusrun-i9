@@ -12,6 +12,7 @@
     "server": "tsx server/index.ts",
     "server:dev": "tsx watch server/index.ts",
     "db:migrate": "tsx server/infrastructure/database/migrations/cli.ts",
+    "db:seed": "tsx server/infrastructure/database/seedSpawns.ts",
     "worker:reset": "tsx server/workers/weeklyResetWorker.ts",
     "vapid:generate": "tsx server/scripts/generate-vapid.ts",
     "test": "tsx --test server/**/*.test.ts"

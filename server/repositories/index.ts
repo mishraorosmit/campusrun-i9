@@ -1,4 +1,5 @@
 export * from './ISpawnRepository';
+export * from './IBatchRepository';
 export * from './IPlayerRepository';
 export * from './IClaimRepository';
 export * from './IZoneRepository';
