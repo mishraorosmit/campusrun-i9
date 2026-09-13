@@ -26,6 +26,7 @@ export class PostgresPlayerRepository implements IPlayerRepository {
         p.last_streak_claim_at, 
         p.last_active_at, 
         p.created_at as "profileCreatedAt",
+        COALESCE(p.preferences, '{}'::jsonb) as preferences,
         a.role as admin_role
        FROM users u
        JOIN profiles p ON u.id = p.user_id
@@ -59,6 +60,7 @@ export class PostgresPlayerRepository implements IPlayerRepository {
         p.last_streak_claim_at, 
         p.last_active_at, 
         p.created_at as "profileCreatedAt",
+        COALESCE(p.preferences, '{}'::jsonb) as preferences,
         a.role as admin_role
        FROM users u
        JOIN profiles p ON u.id = p.user_id
@@ -92,6 +94,7 @@ export class PostgresPlayerRepository implements IPlayerRepository {
         p.last_streak_claim_at, 
         p.last_active_at, 
         p.created_at as "profileCreatedAt",
+        COALESCE(p.preferences, '{}'::jsonb) as preferences,
         a.role as admin_role
        FROM users u
        JOIN profiles p ON u.id = p.user_id
@@ -201,6 +204,58 @@ export class PostgresPlayerRepository implements IPlayerRepository {
     );
   }
 
+  public async updatePreferences(
+    id: string,
+    preferences: Record<string, string | number | boolean | null>
+  ): Promise<Record<string, string | number | boolean | null>> {
+    const res = await this.pool.query(
+      `UPDATE profiles
+       SET preferences = COALESCE(preferences, '{}'::jsonb) || $2::jsonb,
+           updated_at = NOW()
+       WHERE user_id = $1
+       RETURNING preferences;`,
+      [id, JSON.stringify(preferences)]
+    );
+
+    if (res.rowCount === 0) {
+      throw new Error(`Player with id "${id}" not found`);
+    }
+
+    return res.rows[0].preferences || {};
+  }
+
+  public async findAllUserIds(): Promise<string[]> {
+    const res = await this.pool.query(`SELECT id FROM users WHERE status = 'active';`);
+    return res.rows.map((r: any) => r.id);
+  }
+
+  public async findAll(): Promise<Player[]> {
+    const res = await this.pool.query(
+      `SELECT 
+        u.id, 
+        u.email, 
+        u.status, 
+        u.created_at as "userCreatedAt",
+        p.username, 
+        p.display_name, 
+        p.avatar_url, 
+        p.total_points, 
+        p.season_points, 
+        p.claims_count, 
+        p.current_streak_days, 
+        p.longest_streak_days, 
+        p.last_streak_claim_at, 
+        p.last_active_at, 
+        p.created_at as "profileCreatedAt",
+        COALESCE(p.preferences, '{}'::jsonb) as preferences,
+        a.role as admin_role
+       FROM users u
+       JOIN profiles p ON u.id = p.user_id
+       LEFT JOIN admins a ON u.id = a.user_id AND a.revoked_at IS NULL;`
+    );
+    return res.rows.map((row: any) => this.mapRowToPlayer(row));
+  }
+
   private mapRowToPlayer(row: any): Player {
     // Exactly two application roles: STUDENT and ADMIN.
     // If an active (non-revoked) record exists in the admins table, the user is ADMIN; otherwise STUDENT.
@@ -219,6 +274,7 @@ export class PostgresPlayerRepository implements IPlayerRepository {
       tier: 'tier1',
       claimsCount: Number(row.claims_count) || 0,
       currentStreakDays: Number(row.current_streak_days) || 0,
+      preferences: row.preferences || {},
       role,
       createdAt: new Date(row.profileCreatedAt || row.userCreatedAt),
       lastActiveAt: new Date(row.last_active_at),

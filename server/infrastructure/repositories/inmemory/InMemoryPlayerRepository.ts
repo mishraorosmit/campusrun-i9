@@ -67,4 +67,37 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
       this.players.set(id, player);
     }
   }
+
+  async updatePreferences(
+    id: string,
+    preferences: Record<string, string | number | boolean | null>
+  ): Promise<Record<string, string | number | boolean | null>> {
+    const player = this.players.get(id);
+    if (!player) {
+      throw new Error(`Player with id "${id}" not found`);
+    }
+
+    const currentPreferences = player.preferences;
+    const mergedPreferences: Record<string, string | number | boolean | null> = {
+      ...currentPreferences,
+      ...preferences,
+    };
+
+    const updated = new Player({
+      ...player.props,
+      preferences: mergedPreferences,
+      lastActiveAt: new Date(),
+    });
+
+    this.players.set(id, updated);
+    return mergedPreferences;
+  }
+
+  async findAllUserIds(): Promise<string[]> {
+    return Array.from(this.players.keys());
+  }
+
+  async findAll(): Promise<Player[]> {
+    return Array.from(this.players.values());
+  }
 }

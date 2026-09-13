@@ -14,6 +14,7 @@ export class GetPlayerProfileUseCase {
     return {
       id: player.id,
       username: player.username,
+      displayName: player.props.displayName || player.username,
       email: player.props.email,
       avatarUrl: player.props.avatarUrl,
       totalPoints: player.props.totalPoints,
@@ -22,6 +23,7 @@ export class GetPlayerProfileUseCase {
       tier: player.props.tier,
       claimsCount: player.props.claimsCount,
       currentStreakDays: player.props.currentStreakDays,
+      preferences: player.preferences,
       role: player.role,
     };
   }

@@ -108,6 +108,13 @@ export class InMemoryLeaderboardRepository implements ILeaderboardRepository {
 
     const currentAllTime = this.allTimeScores.get(playerId) || 0;
     this.allTimeScores.set(playerId, currentAllTime + points);
+
+    const target = this.sampleLeaderboard.find(
+      (r) => (r.profile_id && r.profile_id === playerId) || r.playerId === playerId
+    );
+    if (target) {
+      target.points = (target.points ?? 0) + points;
+    }
   }
 
   async resetWeekly(): Promise<void> {

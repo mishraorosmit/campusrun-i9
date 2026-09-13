@@ -13,6 +13,13 @@ export type WeeklyCycleStatus = 'active' | 'completed' | 'upcoming' | 'archived'
 
 export type ResetType = 'scheduled' | 'manual';
 
+export type NotificationType =
+  | 'spawn_rotation'
+  | 'claim_reward'
+  | 'streak_reminder'
+  | 'leaderboard_rank'
+  | 'system_announcement';
+
 export type RankChange = 'up' | 'down' | 'same';
 
 export interface Coordinates {

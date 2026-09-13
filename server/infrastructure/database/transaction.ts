@@ -44,3 +44,13 @@ export class TransactionManager implements ITransactionManager {
 }
 
 export const transactionManager = new TransactionManager();
+
+export class InMemoryTransactionManager implements ITransactionManager {
+  public async runInTransaction<T>(work: (tx: ITransactionContext) => Promise<T>): Promise<T> {
+    const dummyTx: ITransactionContext = {
+      query: async <R = Record<string, unknown>>() => ({ rows: [] as R[], rowCount: 1 }),
+    };
+    return work(dummyTx);
+  }
+}
+

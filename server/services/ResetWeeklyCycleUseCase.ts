@@ -2,6 +2,8 @@ import { WeeklyCycleService, ResetWeeklyCycleInputDTO, ResetWeeklyCycleResultDTO
 import { IWeeklyCycleRepository } from '../repositories/IWeeklyCycleRepository';
 import { ILeaderboardRepository } from '../repositories/ILeaderboardRepository';
 import { ITransactionManager } from '../repositories/ITransactionManager';
+import { IRealtimeService } from './IRealtimeService';
+import { IEventBus } from '../events/IEventBus';
 
 export class ResetWeeklyCycleUseCase {
   private readonly weeklyCycleService: WeeklyCycleService;
@@ -9,12 +11,20 @@ export class ResetWeeklyCycleUseCase {
   constructor(
     weeklyCycleRepoOrService: IWeeklyCycleRepository | WeeklyCycleService,
     leaderboardRepo?: ILeaderboardRepository,
-    txManager?: ITransactionManager
+    txManager?: ITransactionManager,
+    realtimeService?: IRealtimeService,
+    eventBus?: IEventBus
   ) {
     if ('resetWeeklyCycle' in weeklyCycleRepoOrService) {
       this.weeklyCycleService = weeklyCycleRepoOrService;
     } else {
-      this.weeklyCycleService = new WeeklyCycleService(weeklyCycleRepoOrService, leaderboardRepo, txManager);
+      this.weeklyCycleService = new WeeklyCycleService(
+        weeklyCycleRepoOrService,
+        leaderboardRepo,
+        txManager,
+        realtimeService,
+        eventBus
+      );
     }
   }
 

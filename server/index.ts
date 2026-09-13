@@ -1,3 +1,4 @@
+import http from 'http';
 import { config } from './config';
 import { createApp } from './app';
 import { dbPool } from './infrastructure/database';
@@ -7,6 +8,7 @@ import { TransactionManager } from './infrastructure/database/transaction';
 import { WeeklyCycleService } from './services/WeeklyCycleService';
 import { ResetWeeklyCycleUseCase } from './services/ResetWeeklyCycleUseCase';
 import { WeeklyResetScheduler } from './services/WeeklyResetScheduler';
+import { initSocketServer, closeSocketServer } from './realtime';
 
 // 1. Initialize Database Pool
 dbPool.initialize({
@@ -18,7 +20,11 @@ dbPool.initialize({
   statementTimeoutMillis: config.DB_STATEMENT_TIMEOUT_MS,
 });
 
-const app = createApp();
+export const app = createApp();
+export const httpServer = http.createServer(app);
+
+// Initialize Socket.IO Realtime Engine
+export const io = initSocketServer(httpServer);
 
 // 2. Initialize Weekly Reset Scheduler
 const pool = dbPool.getPool();
@@ -34,13 +40,14 @@ const weeklyResetScheduler = new WeeklyResetScheduler(weeklyCycleRepo, resetWeek
   autoStart: config.NODE_ENV !== 'test',
 });
 
-const server = app.listen(config.PORT, () => {
+export const server = httpServer.listen(config.PORT, () => {
   console.log('====================================================');
   console.log(`  Project I9 Backend — Active & Ready`);
   console.log(`  Mode:         ${config.NODE_ENV}`);
   console.log(`  Port:         ${config.PORT}`);
   console.log(`  API Base:     http://localhost:${config.PORT}${config.API_PREFIX}`);
   console.log(`  Health Check: http://localhost:${config.PORT}/api/health`);
+  console.log(`  Realtime WS:  Socket.IO Active`);
   console.log(`  Weekly Reset: Scheduler Active (${weeklyResetScheduler.isRunning() ? 'Running' : 'Stopped'})`);
   console.log('====================================================');
 });
@@ -51,6 +58,9 @@ async function handleShutdown(signal: string) {
 
   // Stop background scheduler
   weeklyResetScheduler.stop();
+
+  // Close Socket.IO server
+  await closeSocketServer();
 
   // Stop accepting new HTTP requests
   server.close(async () => {

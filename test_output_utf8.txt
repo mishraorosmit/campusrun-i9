@@ -1,0 +1,2950 @@
+﻿
+> react-example@0.0.0 test
+> tsx --test server/**/*.test.ts
+
+TAP version 13
+# Γùç injected env (24) from .env // tip: Γîÿ suppress logs { quiet: true }
+# Subtest: Admin Manual Weekly Reset Endpoint & Authorization
+    # Subtest: 1. Manual Weekly Reset Handler Execution
+        # Subtest: should trigger manual reset with deterministic resetKey `manual:<active_cycle_id>` and reset scores to 0
+        ok 1 - should trigger manual reset with deterministic resetKey `manual:<active_cycle_id>` and reset scores to 0
+          ---
+          duration_ms: 16.5814
+          type: 'test'
+          ...
+        # Subtest: should return duplicate: true on repeated manual reset attempt for same cycle
+        ok 2 - should return duplicate: true on repeated manual reset attempt for same cycle
+          ---
+          duration_ms: 1.5745
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Manual Weekly Reset Handler Execution
+      ---
+      duration_ms: 23.4421
+      type: 'suite'
+      ...
+    # Subtest: 2. Admin Authorization Middleware
+        # Subtest: should allow access for users with role = "admin"
+        ok 1 - should allow access for users with role = "admin"
+          ---
+          duration_ms: 2.9145
+          type: 'test'
+          ...
+        # Subtest: should allow access for users with role = "superadmin"
+        ok 2 - should allow access for users with role = "superadmin"
+          ---
+          duration_ms: 1.2071
+          type: 'test'
+          ...
+        # Subtest: should reject non-admin users (role = "player") with 403 ForbiddenError
+        ok 3 - should reject non-admin users (role = "player") with 403 ForbiddenError
+          ---
+          duration_ms: 1.4899
+          type: 'test'
+          ...
+        # Subtest: should reject unauthenticated requests with 401 UnauthorizedError
+        ok 4 - should reject unauthenticated requests with 401 UnauthorizedError
+          ---
+          duration_ms: 0.7576
+          type: 'test'
+          ...
+        1..4
+    ok 2 - 2. Admin Authorization Middleware
+      ---
+      duration_ms: 7.2055
+      type: 'suite'
+      ...
+    1..2
+ok 1 - Admin Manual Weekly Reset Endpoint & Authorization
+  ---
+  duration_ms: 32.4444
+  type: 'suite'
+  ...
+# Subtest: All-Time Leaderboard Query & Use Case
+    # Subtest: 1. should order all-time leaderboard by total_points DESC and break ties by profile_id ASC
+    ok 1 - 1. should order all-time leaderboard by total_points DESC and break ties by profile_id ASC
+      ---
+      duration_ms: 62.429
+      type: 'test'
+      ...
+    # Subtest: 2. should support pagination with limit and offset while preserving global rank calculation
+    ok 2 - 2. should support pagination with limit and offset while preserving global rank calculation
+      ---
+      duration_ms: 1.7051
+      type: 'test'
+      ...
+    # Subtest: 3. should return required fields in all-time controller response (profile_id, points, rank, username, displayName)
+    ok 3 - 3. should return required fields in all-time controller response (profile_id, points, rank, username, displayName)
+      ---
+      duration_ms: 2.7674
+      type: 'test'
+      ...
+    1..3
+ok 2 - All-Time Leaderboard Query & Use Case
+  ---
+  duration_ms: 69.9575
+  type: 'suite'
+  ...
+# Subtest: PostgresLeaderboardRepository All-Time Query Construction
+    # Subtest: should construct SQL query with ROW_NUMBER() OVER (ORDER BY total_points DESC, profile_id ASC), LIMIT, and OFFSET
+    ok 1 - should construct SQL query with ROW_NUMBER() OVER (ORDER BY total_points DESC, profile_id ASC), LIMIT, and OFFSET
+      ---
+      duration_ms: 1.0991
+      type: 'test'
+      ...
+    1..1
+ok 3 - PostgresLeaderboardRepository All-Time Query Construction
+  ---
+  duration_ms: 1.621
+  type: 'suite'
+  ...
+# Subtest: ClaimController Concurrent Duplicate Requests
+    # Subtest: should handle simultaneous controller calls returning 201 for winner and error for duplicate
+    ok 1 - should handle simultaneous controller calls returning 201 for winner and error for duplicate
+      ---
+      duration_ms: 13.3152
+      type: 'test'
+      ...
+    1..1
+ok 4 - ClaimController Concurrent Duplicate Requests
+  ---
+  duration_ms: 15.3067
+  type: 'suite'
+  ...
+# Subtest: Campus Run Claim Duplicate & Race Protection
+    # Subtest: 1. should not allow a player to claim the same spawn twice sequentially
+    ok 1 - 1. should not allow a player to claim the same spawn twice sequentially
+      ---
+      duration_ms: 13.9918
+      type: 'test'
+      ...
+    # Subtest: 2. should result in only one successful claim when simultaneous duplicate attempts occur
+    ok 2 - 2. should result in only one successful claim when simultaneous duplicate attempts occur
+      ---
+      duration_ms: 3.6314
+      type: 'test'
+      ...
+    # Subtest: 3. should increase player points exactly once after a successful claim
+    ok 3 - 3. should increase player points exactly once after a successful claim
+      ---
+      duration_ms: 0.8938
+      type: 'test'
+      ...
+    # Subtest: 4. should not change player points on duplicate claim attempts
+    ok 4 - 4. should not change player points on duplicate claim attempts
+      ---
+      duration_ms: 1.4515
+      type: 'test'
+      ...
+    # Subtest: 5. should not leave partial database state if a claim operation fails mid-transaction
+    ok 5 - 5. should not leave partial database state if a claim operation fails mid-transaction
+      ---
+      duration_ms: 1.7997
+      type: 'test'
+      ...
+    1..5
+ok 5 - Campus Run Claim Duplicate & Race Protection
+  ---
+  duration_ms: 27.7099
+  type: 'suite'
+  ...
+# Subtest: PostgresClaimRepository ON CONFLICT DO NOTHING Verification
+    # Subtest: should execute INSERT ON CONFLICT DO NOTHING and return true on insert, false on conflict
+    ok 1 - should execute INSERT ON CONFLICT DO NOTHING and return true on insert, false on conflict
+      ---
+      duration_ms: 0.6989
+      type: 'test'
+      ...
+    1..1
+ok 6 - PostgresClaimRepository ON CONFLICT DO NOTHING Verification
+  ---
+  duration_ms: 1.0764
+  type: 'suite'
+  ...
+# [DatabaseNotificationHandler] Error handling CLAIM_SUCCESS event: Error: Database connection crashed during notification write
+#     at Object.save (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:218:17)
+#     at DatabaseNotificationHandler.handleClaimSuccess (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\DatabaseNotificationHandler.ts:183:35)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:20:15)
+#     at Array.map (<anonymous>)
+#     at InMemoryEventBus.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:18:50)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:229:24)
+#     at waitForActual (node:assert:552:21)
+#     at Function.doesNotReject (node:assert:707:39)
+#     at TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:228:20)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+# [DatabaseNotificationHandler] Error handling SPAWN_ROTATED event: Error: Database connection crashed during batch write
+#     at Object.saveBatch (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:221:17)
+#     at DatabaseNotificationHandler.saveNotifications (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\DatabaseNotificationHandler.ts:294:35)
+#     at DatabaseNotificationHandler.handleSpawnRotated (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\DatabaseNotificationHandler.ts:124:18)
+#     at async <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:20:9)
+#     at async Promise.all (index 1)
+#     at async InMemoryEventBus.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:26:5)
+#     at async <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:241:9)
+#     at async waitForActual (node:assert:566:5)
+#     at async Function.doesNotReject (node:assert:707:33)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\databaseNotificationHandler.test.ts:228:7)
+# Subtest: Database Notification Handler for Internal Event System
+    # Subtest: 1. CLAIM_SUCCESS -> Personal Notification
+        # Subtest: creates a personal claim_reward notification ONLY for the claiming player
+        ok 1 - creates a personal claim_reward notification ONLY for the claiming player
+          ---
+          duration_ms: 3.4602
+          type: 'test'
+          ...
+        1..1
+    ok 1 - 1. CLAIM_SUCCESS -> Personal Notification
+      ---
+      duration_ms: 4.8883
+      type: 'suite'
+      ...
+    # Subtest: 2. RANK_CHANGED -> Personal Notification
+        # Subtest: creates a personal leaderboard_rank notification ONLY for the affected player
+        ok 1 - creates a personal leaderboard_rank notification ONLY for the affected player
+          ---
+          duration_ms: 14.4443
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. RANK_CHANGED -> Personal Notification
+      ---
+      duration_ms: 14.9628
+      type: 'suite'
+      ...
+    # Subtest: 3. SPAWN_ROTATED -> Global Notification
+        # Subtest: creates a spawn_rotation notification for all registered players
+        ok 1 - creates a spawn_rotation notification for all registered players
+          ---
+          duration_ms: 18.7888
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. SPAWN_ROTATED -> Global Notification
+      ---
+      duration_ms: 19.4069
+      type: 'suite'
+      ...
+    # Subtest: 4. SPAWN_EXPIRED -> Notification
+        # Subtest: creates a spawn_rotation expiration notification for players
+        ok 1 - creates a spawn_rotation expiration notification for players
+          ---
+          duration_ms: 1.208
+          type: 'test'
+          ...
+        1..1
+    ok 4 - 4. SPAWN_EXPIRED -> Notification
+      ---
+      duration_ms: 1.594
+      type: 'suite'
+      ...
+    # Subtest: 5. RESET_APPROACHING -> Notification
+        # Subtest: creates a streak_reminder / reset approaching notification for players
+        ok 1 - creates a streak_reminder / reset approaching notification for players
+          ---
+          duration_ms: 4.3389
+          type: 'test'
+          ...
+        1..1
+    ok 5 - 5. RESET_APPROACHING -> Notification
+      ---
+      duration_ms: 4.824
+      type: 'suite'
+      ...
+    # Subtest: 6. WEEKLY_RESET -> Global Notification
+        # Subtest: creates a system_announcement weekly reset notification for all players
+        ok 1 - creates a system_announcement weekly reset notification for all players
+          ---
+          duration_ms: 1.0493
+          type: 'test'
+          ...
+        1..1
+    ok 6 - 6. WEEKLY_RESET -> Global Notification
+      ---
+      duration_ms: 1.2835
+      type: 'suite'
+      ...
+    # Subtest: 7. Fault Tolerance & Safety
+        # Subtest: catches repository errors without crashing or bubbling to the EventBus
+        ok 1 - catches repository errors without crashing or bubbling to the EventBus
+          ---
+          duration_ms: 6.0372
+          type: 'test'
+          ...
+        # Subtest: unregisters cleanly and stops receiving events
+        ok 2 - unregisters cleanly and stops receiving events
+          ---
+          duration_ms: 0.7029
+          type: 'test'
+          ...
+        1..2
+    ok 7 - 7. Fault Tolerance & Safety
+      ---
+      duration_ms: 7.0487
+      type: 'suite'
+      ...
+    1..7
+ok 7 - Database Notification Handler for Internal Event System
+  ---
+  duration_ms: 56.7007
+  type: 'suite'
+  ...
+# Subtest: Domain Events System & 6 Logical Events
+    # Subtest: 1. SPAWN_ROTATED / RotationTriggeredEvent can be published and handled
+    ok 1 - 1. SPAWN_ROTATED / RotationTriggeredEvent can be published and handled
+      ---
+      duration_ms: 2.6854
+      type: 'test'
+      ...
+    # Subtest: 2. SPAWN_EXPIRED / SpawnExpiredEvent can be published and handled
+    ok 2 - 2. SPAWN_EXPIRED / SpawnExpiredEvent can be published and handled
+      ---
+      duration_ms: 2.3199
+      type: 'test'
+      ...
+    # Subtest: 3. CLAIM_SUCCESS / SpawnClaimedEvent can be published and handled
+    ok 3 - 3. CLAIM_SUCCESS / SpawnClaimedEvent can be published and handled
+      ---
+      duration_ms: 0.9123
+      type: 'test'
+      ...
+    # Subtest: 4. RANK_CHANGED / RankChangedEvent can be published and handled
+    ok 4 - 4. RANK_CHANGED / RankChangedEvent can be published and handled
+      ---
+      duration_ms: 0.7849
+      type: 'test'
+      ...
+    # Subtest: 5. RESET_APPROACHING / ResetApproachingEvent can be published and handled
+    ok 5 - 5. RESET_APPROACHING / ResetApproachingEvent can be published and handled
+      ---
+      duration_ms: 1.1906
+      type: 'test'
+      ...
+    # Subtest: 6. WEEKLY_RESET / LeaderboardResetEvent can be published and handled
+    ok 6 - 6. WEEKLY_RESET / LeaderboardResetEvent can be published and handled
+      ---
+      duration_ms: 26.0337
+      type: 'test'
+      ...
+    # Subtest: Existing PlayerStreakUpdatedEvent remains fully functional
+    ok 7 - Existing PlayerStreakUpdatedEvent remains fully functional
+      ---
+      duration_ms: 3.6501
+      type: 'test'
+      ...
+    1..7
+ok 8 - Domain Events System & 6 Logical Events
+  ---
+  duration_ms: 40.4938
+  type: 'suite'
+  ...
+# Subtest: Use-Case Domain Event Wiring & Fault Tolerance
+    # Subtest: RotateSpawnsUseCase emits RotationTriggeredEvent after rotation is saved
+    ok 1 - RotateSpawnsUseCase emits RotationTriggeredEvent after rotation is saved
+      ---
+      duration_ms: 120.4048
+      type: 'test'
+      ...
+    # Subtest: AdminManageSpawnsUseCase emits SpawnExpiredEvent when disabling a spawn
+    ok 2 - AdminManageSpawnsUseCase emits SpawnExpiredEvent when disabling a spawn
+      ---
+      duration_ms: 132.0657
+      type: 'test'
+      ...
+    # Subtest: ClaimSpawnUseCase emits SpawnClaimedEvent and RankChangedEvent post-commit
+    ok 3 - ClaimSpawnUseCase emits SpawnClaimedEvent and RankChangedEvent post-commit
+      ---
+      duration_ms: 38.4235
+      type: 'test'
+      ...
+    # Subtest: WeeklyCycleService emits LeaderboardResetEvent post-commit and ResetApproachingEvent when near reset
+    ok 4 - WeeklyCycleService emits LeaderboardResetEvent post-commit and ResetApproachingEvent when near reset
+      ---
+      duration_ms: 106.1553
+      type: 'test'
+      ...
+# [RotateSpawnsUseCase] Error publishing RotationTriggeredEvent: Error: Event bus internal worker exploded
+#     at Object.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:429:15)
+#     at RotateSpawnsUseCase.execute (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\RotateSpawnsUseCase.ts:45:29)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:448:20)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+# [AdminManageSpawnsUseCase] Error publishing SpawnExpiredEvent: Error: Event bus internal worker exploded
+#     at Object.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:429:15)
+#     at AdminManageSpawnsUseCase.toggleSpawn (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\AdminManageSpawnsUseCase.ts:24:29)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:473:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+# [WeeklyCycleService] Error publishing ResetApproachingEvent: Error: Event bus internal worker exploded
+#     at Object.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:429:15)
+#     at WeeklyCycleService.getNextResetTimestamp (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\WeeklyCycleService.ts:144:29)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:500:26)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+# [WeeklyCycleService] Error publishing LeaderboardResetEvent: Error: Event bus internal worker exploded
+#     at Object.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:429:15)
+#     at WeeklyCycleService.resetWeeklyCycle (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\WeeklyCycleService.ts:273:29)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\domainEventsSystem.test.ts:503:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+    # Subtest: EventBus publish failure does NOT break or roll back use cases
+    ok 5 - EventBus publish failure does NOT break or roll back use cases
+      ---
+      duration_ms: 78.6194
+      type: 'test'
+      ...
+    1..5
+ok 9 - Use-Case Domain Event Wiring & Fault Tolerance
+  ---
+  duration_ms: 477.9206
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ suppress logs { quiet: true }
+# [DatabaseNotificationHandler] Error handling CLAIM_SUCCESS event: Error: Database disk full
+#     at Object.save (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\eventSystemFanoutIntegration.test.ts:302:17)
+#     at DatabaseNotificationHandler.handleClaimSuccess (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\DatabaseNotificationHandler.ts:183:35)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:20:15)
+#     at Array.map (<anonymous>)
+#     at InMemoryEventBus.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:18:50)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\eventSystemFanoutIntegration.test.ts:324:24)
+#     at waitForActual (node:assert:552:21)
+#     at Function.doesNotReject (node:assert:707:39)
+#     at TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\eventSystemFanoutIntegration.test.ts:323:20)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+# Subtest: Event System 4-Way Fan-Out Integration (Notifications, Realtime, Push, Analytics)
+    # Subtest: 1. Six Domain Events Fan-Out Across All 4 Handlers
+        # Subtest: 1. SPAWN_ROTATED reaches all 4 handlers
+        ok 1 - 1. SPAWN_ROTATED reaches all 4 handlers
+          ---
+          duration_ms: 13.5903
+          type: 'test'
+          ...
+        # Subtest: 2. SPAWN_EXPIRED reaches all 4 handlers
+        ok 2 - 2. SPAWN_EXPIRED reaches all 4 handlers
+          ---
+          duration_ms: 9.4166
+          type: 'test'
+          ...
+        # Subtest: 3. CLAIM_SUCCESS reaches all 4 handlers with strict personal targeting
+        ok 3 - 3. CLAIM_SUCCESS reaches all 4 handlers with strict personal targeting
+          ---
+          duration_ms: 2.1793
+          type: 'test'
+          ...
+        # Subtest: 4. RANK_CHANGED reaches all 4 handlers with strict personal targeting
+        ok 4 - 4. RANK_CHANGED reaches all 4 handlers with strict personal targeting
+          ---
+          duration_ms: 1.9505
+          type: 'test'
+          ...
+        # Subtest: 5. RESET_APPROACHING reaches all 4 handlers
+        ok 5 - 5. RESET_APPROACHING reaches all 4 handlers
+          ---
+          duration_ms: 5.2961
+          type: 'test'
+          ...
+        # Subtest: 6. WEEKLY_RESET reaches all 4 handlers
+        ok 6 - 6. WEEKLY_RESET reaches all 4 handlers
+          ---
+          duration_ms: 7.9001
+          type: 'test'
+          ...
+        1..6
+    ok 1 - 1. Six Domain Events Fan-Out Across All 4 Handlers
+      ---
+      duration_ms: 43.7181
+      type: 'suite'
+      ...
+    # Subtest: 2. Handler Error Isolation (Fault Tolerance)
+        # Subtest: a failure in one handler does NOT prevent other handlers from executing
+        ok 1 - a failure in one handler does NOT prevent other handlers from executing
+          ---
+          duration_ms: 5.1734
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Handler Error Isolation (Fault Tolerance)
+      ---
+      duration_ms: 5.7809
+      type: 'suite'
+      ...
+    1..2
+ok 10 - Event System 4-Way Fan-Out Integration (Notifications, Realtime, Push, Analytics)
+  ---
+  duration_ms: 52.0602
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ enable debugging { debug: true }
+# [HTTP] GET /api/v1/game/state -> 200 (22ms)
+# Subtest: Game APIs Route Wiring & End-to-End Integration
+    # Subtest: 1. GET /api/v1/game/state
+        # Subtest: should return game state with active cycle info and spawn counts
+        ok 1 - should return game state with active cycle info and spawn counts
+          ---
+          duration_ms: 163.9909
+          type: 'test'
+          ...
+        1..1
+    ok 1 - 1. GET /api/v1/game/state
+      ---
+      duration_ms: 165.2439
+      type: 'suite'
+      ...
+# [HTTP] GET /api/v1/game/rotation -> 200 (3ms)
+    # Subtest: 2. GET /api/v1/game/rotation
+        # Subtest: should return rotation state without mutating database
+        ok 1 - should return rotation state without mutating database
+          ---
+          duration_ms: 15.6726
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. GET /api/v1/game/rotation
+      ---
+      duration_ms: 16.0717
+      type: 'suite'
+      ...
+# [HTTP] GET /api/v1/spawns/active -> 200 (2ms)
+    # Subtest: 3. GET /api/v1/spawns/active
+        # Subtest: should return only active, non-expired spawns
+        ok 1 - should return only active, non-expired spawns
+          ---
+          duration_ms: 10.2176
+          type: 'test'
+          ...
+# [HTTP] GET /api/v1/spawns/active?north=invalid_lat -> 400 (2ms)
+        # Subtest: should reject invalid query bounds parameters with 400
+        ok 2 - should reject invalid query bounds parameters with 400
+          ---
+          duration_ms: 9.6753
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. GET /api/v1/spawns/active
+      ---
+      duration_ms: 20.9239
+      type: 'suite'
+      ...
+# [HTTP] GET /api/v1/spawns/spawn_lib_01 -> 200 (2ms)
+    # Subtest: 4. GET /api/v1/spawns/:id
+        # Subtest: should return safe public fields for existing spawn
+        ok 1 - should return safe public fields for existing spawn
+          ---
+          duration_ms: 16.4154
+          type: 'test'
+          ...
+# [HTTP] GET /api/v1/spawns/non_existent_spawn_999 -> 404 (2ms)
+        # Subtest: should return 404 for non-existent spawn id
+        ok 2 - should return 404 for non-existent spawn id
+          ---
+          duration_ms: 12.4864
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. GET /api/v1/spawns/:id
+      ---
+      duration_ms: 29.7926
+      type: 'suite'
+      ...
+# [HTTP] POST /api/v1/claims -> 401 (2ms)
+    # Subtest: 5. POST /api/v1/claims
+        # Subtest: should return 401 Unauthorized when unauthenticated
+        ok 1 - should return 401 Unauthorized when unauthenticated
+          ---
+          duration_ms: 61.3604
+          type: 'test'
+          ...
+# [HTTP] POST /api/v1/claims -> 400 (2ms)
+        # Subtest: should return 400 Bad Request when spawnId is missing or empty
+        ok 2 - should return 400 Bad Request when spawnId is missing or empty
+          ---
+          duration_ms: 8.4393
+          type: 'test'
+          ...
+# [HTTP] POST /api/v1/claims -> 201 (8ms)
+        # Subtest: should successfully create claim with 201 Created for authenticated player
+        ok 3 - should successfully create claim with 201 Created for authenticated player
+          ---
+          duration_ms: 18.7867
+          type: 'test'
+          ...
+# [HTTP] POST /api/v1/claims -> 409 (9ms)
+        # Subtest: should return 409 Conflict when player attempts duplicate claim on same spawn
+        ok 4 - should return 409 Conflict when player attempts duplicate claim on same spawn
+          ---
+          duration_ms: 23.7534
+          type: 'test'
+          ...
+# [HTTP] POST /api/v1/claims -> 404 (1ms)
+        # Subtest: should return 404 Not Found when claiming non-existent spawn
+        ok 5 - should return 404 Not Found when claiming non-existent spawn
+          ---
+          duration_ms: 13.9053
+          type: 'test'
+          ...
+# [HTTP] POST /api/v1/claims -> 422 (3ms)
+        # Subtest: should return 422 Unprocessable Entity when claiming expired spawn
+        ok 6 - should return 422 Unprocessable Entity when claiming expired spawn
+          ---
+          duration_ms: 9.4988
+          type: 'test'
+          ...
+        1..6
+    ok 5 - 5. POST /api/v1/claims
+      ---
+      duration_ms: 137.6627
+      type: 'suite'
+      ...
+# [HTTP] GET /api/v1/leaderboard/weekly -> 200 (7ms)
+    # Subtest: 6. GET /api/v1/leaderboard/weekly
+        # Subtest: should return players ordered by weekly season_points descending with rank
+        ok 1 - should return players ordered by weekly season_points descending with rank
+          ---
+          duration_ms: 13.3361
+          type: 'test'
+          ...
+# [HTTP] GET /api/v1/leaderboard/weekly?limit=1&offset=1 -> 200 (1ms)
+        # Subtest: should support pagination via limit and offset query parameters
+        ok 2 - should support pagination via limit and offset query parameters
+          ---
+          duration_ms: 5.0345
+          type: 'test'
+          ...
+        1..2
+    ok 6 - 6. GET /api/v1/leaderboard/weekly
+      ---
+      duration_ms: 18.798
+      type: 'suite'
+      ...
+# [HTTP] GET /api/v1/leaderboard/all-time -> 200 (2ms)
+    # Subtest: 7. GET /api/v1/leaderboard/all-time
+        # Subtest: should return players ordered by all-time points descending with rank
+        ok 1 - should return players ordered by all-time points descending with rank
+          ---
+          duration_ms: 6.3276
+          type: 'test'
+          ...
+# [HTTP] GET /api/v1/leaderboard/all-time?limit=1&offset=1 -> 200 (1ms)
+        # Subtest: should support pagination via limit and offset query parameters
+        ok 2 - should support pagination via limit and offset query parameters
+          ---
+          duration_ms: 5.912
+          type: 'test'
+          ...
+        1..2
+    ok 7 - 7. GET /api/v1/leaderboard/all-time
+      ---
+      duration_ms: 12.7715
+      type: 'suite'
+      ...
+    1..7
+ok 11 - Game APIs Route Wiring & End-to-End Integration
+  ---
+  duration_ms: 442.2577
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ override existing { override: true }
+# Subtest: Game Event & Leaderboard Realtime Broadcasting
+    # Subtest: Claim & Leaderboard Events Broadcasting
+        # Subtest: broadcasts anonymous claim:success, claim:success_personal, and leaderboard:updated on valid claim
+        ok 1 - broadcasts anonymous claim:success, claim:success_personal, and leaderboard:updated on valid claim
+          ---
+          duration_ms: 7.0635
+          type: 'test'
+          ...
+        # Subtest: does not emit any realtime event if database transaction fails
+        ok 2 - does not emit any realtime event if database transaction fails
+          ---
+          duration_ms: 2.8525
+          type: 'test'
+          ...
+        1..2
+    ok 1 - Claim & Leaderboard Events Broadcasting
+      ---
+      duration_ms: 12.0332
+      type: 'suite'
+      ...
+    # Subtest: Weekly Reset Broadcasting (leaderboard:weekly_reset)
+        # Subtest: broadcasts leaderboard:weekly_reset and cycle:reset to campus_global upon successful weekly cycle reset
+        ok 1 - broadcasts leaderboard:weekly_reset and cycle:reset to campus_global upon successful weekly cycle reset
+          ---
+          duration_ms: 2.5784
+          type: 'test'
+          ...
+        # Subtest: does not broadcast duplicate leaderboard:weekly_reset events if resetKey was already processed
+        ok 2 - does not broadcast duplicate leaderboard:weekly_reset events if resetKey was already processed
+          ---
+          duration_ms: 0.9439
+          type: 'test'
+          ...
+        1..2
+    ok 2 - Weekly Reset Broadcasting (leaderboard:weekly_reset)
+      ---
+      duration_ms: 3.9923
+      type: 'suite'
+      ...
+    # Subtest: Rotation and Batch Spawn Events Broadcasting
+        # Subtest: broadcasts spawn:batch_created and rotation:manual to campus_global on manual rotation
+        ok 1 - broadcasts spawn:batch_created and rotation:manual to campus_global on manual rotation
+          ---
+          duration_ms: 3.2544
+          type: 'test'
+          ...
+        # Subtest: broadcasts spawn:expired when admin disables a spawn
+        ok 2 - broadcasts spawn:expired when admin disables a spawn
+          ---
+          duration_ms: 2.6019
+          type: 'test'
+          ...
+        1..2
+    ok 3 - Rotation and Batch Spawn Events Broadcasting
+      ---
+      duration_ms: 6.5788
+      type: 'suite'
+      ...
+# [Socket.IO] Client connected: socket=JlCwN_qMKP1boOZLAAAA, user=player_reconnect_01 (ReconnectPlayer)
+# [Socket.IO] Client disconnected: socket=JlCwN_qMKP1boOZLAAAA, user=player_reconnect_01 (reason: server shutting down)
+    # Subtest: Client Reconnect & Lightweight Sync Signal (reconnect:sync_required)
+        # Subtest: emits reconnect:sync_required upon client connection without heavy full-state dumps
+        ok 1 - emits reconnect:sync_required upon client connection without heavy full-state dumps
+          ---
+          duration_ms: 163.8744
+          type: 'test'
+          ...
+# [Socket.IO] Client connected: socket=KA4Ner9Ql0JQmnOuAAAB, user=player_reconnect_02 (ReconnectPlayer2)
+# [Socket.IO] Client disconnected: socket=KA4Ner9Ql0JQmnOuAAAB, user=player_reconnect_02 (reason: server shutting down)
+        # Subtest: responds with lightweight sync signal when client requests reconnect:sync
+        ok 2 - responds with lightweight sync signal when client requests reconnect:sync
+          ---
+          duration_ms: 27.5968
+          type: 'test'
+          ...
+        1..2
+    ok 4 - Client Reconnect & Lightweight Sync Signal (reconnect:sync_required)
+      ---
+      duration_ms: 192.0627
+      type: 'suite'
+      ...
+    # Subtest: RealtimeService Fire-and-Forget Safety
+        # Subtest: does not throw or block execution even if Socket.IO server throws an unexpected error
+        ok 1 - does not throw or block execution even if Socket.IO server throws an unexpected error
+          ---
+          duration_ms: 1.7736
+          type: 'test'
+          ...
+        1..1
+    ok 5 - RealtimeService Fire-and-Forget Safety
+      ---
+      duration_ms: 2.0016
+      type: 'suite'
+      ...
+    1..5
+ok 12 - Game Event & Leaderboard Realtime Broadcasting
+  ---
+  duration_ms: 218.3299
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ suppress logs { quiet: true }
+# Subtest: Game APIs (GET /api/v1/game/state & GET /api/v1/game/rotation)
+    # Subtest: 1. GET /api/v1/game/state
+        # Subtest: should return complete game state with active cycle, active spawn count, and next reset timestamp
+        ok 1 - should return complete game state with active cycle, active spawn count, and next reset timestamp
+          ---
+          duration_ms: 5.9238
+          type: 'test'
+          ...
+        # Subtest: should handle game state when no weekly cycle is currently configured
+        ok 2 - should handle game state when no weekly cycle is currently configured
+          ---
+          duration_ms: 0.8123
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. GET /api/v1/game/state
+      ---
+      duration_ms: 8.5175
+      type: 'suite'
+      ...
+    # Subtest: 2. GET /api/v1/game/rotation
+        # Subtest: should return current rotation state when an explicit rotation is recorded
+        ok 1 - should return current rotation state when an explicit rotation is recorded
+          ---
+          duration_ms: 1.3164
+          type: 'test'
+          ...
+        # Subtest: should derive safe fallback rotation from active spawns when rotation repo is initially empty
+        ok 2 - should derive safe fallback rotation from active spawns when rotation repo is initially empty
+          ---
+          duration_ms: 1.105
+          type: 'test'
+          ...
+        1..2
+    ok 2 - 2. GET /api/v1/game/rotation
+      ---
+      duration_ms: 2.7939
+      type: 'suite'
+      ...
+    # Subtest: 3. App Integration & Route Mounting
+        # Subtest: should mount game routes under /api/v1/game in full app setup
+        ok 1 - should mount game routes under /api/v1/game in full app setup
+          ---
+          duration_ms: 46.8712
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. App Integration & Route Mounting
+      ---
+      duration_ms: 47.0814
+      type: 'suite'
+      ...
+    1..3
+ok 13 - Game APIs (GET /api/v1/game/state & GET /api/v1/game/rotation)
+  ---
+  duration_ms: 60.7522
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γùê secrets for agents [www.dotenvx.com]
+# Subtest: JWT Authentication Utilities & Programmatic Token Verification
+    # Subtest: should successfully sign and verify a token programmatically with verifyToken
+    ok 1 - should successfully sign and verify a token programmatically with verifyToken
+      ---
+      duration_ms: 3.3708
+      type: 'test'
+      ...
+    # Subtest: should throw an error when token signature is tampered
+    ok 2 - should throw an error when token signature is tampered
+      ---
+      duration_ms: 1.8315
+      type: 'test'
+      ...
+    # Subtest: should throw an expired error when token is past expiration
+    ok 3 - should throw an expired error when token is past expiration
+      ---
+      duration_ms: 0.6733
+      type: 'test'
+      ...
+    # Subtest: should reject invalid or malformed tokens
+    ok 4 - should reject invalid or malformed tokens
+      ---
+      duration_ms: 5.0264
+      type: 'test'
+      ...
+    1..4
+ok 14 - JWT Authentication Utilities & Programmatic Token Verification
+  ---
+  duration_ms: 14.0472
+  type: 'suite'
+  ...
+# Subtest: Leaderboard Consistency & Weekly Reset Rules
+    # Subtest: 1. should atomically increment both all-time points and weekly points upon a successful claim
+    ok 1 - 1. should atomically increment both all-time points and weekly points upon a successful claim
+      ---
+      duration_ms: 7.3456
+      type: 'test'
+      ...
+    # Subtest: 2. should perform weekly reset setting season_points to 0 while preserving total_points and all-time rankings
+    ok 2 - 2. should perform weekly reset setting season_points to 0 while preserving total_points and all-time rankings
+      ---
+      duration_ms: 25.7329
+      type: 'test'
+      ...
+    # Subtest: 3. should expose weekly reset via AdminController without modifying all-time state
+    ok 3 - 3. should expose weekly reset via AdminController without modifying all-time state
+      ---
+      duration_ms: 1.4459
+      type: 'test'
+      ...
+    1..3
+ok 15 - Leaderboard Consistency & Weekly Reset Rules
+  ---
+  duration_ms: 36.7138
+  type: 'suite'
+  ...
+# Subtest: PostgresLeaderboardRepository SQL Consistency Verification
+    # Subtest: should execute UPDATE profiles SET season_points = 0 on resetWeekly
+    ok 1 - should execute UPDATE profiles SET season_points = 0 on resetWeekly
+      ---
+      duration_ms: 0.6016
+      type: 'test'
+      ...
+    1..1
+ok 16 - PostgresLeaderboardRepository SQL Consistency Verification
+  ---
+  duration_ms: 1.0562
+  type: 'suite'
+  ...
+# Subtest: Leaderboard Ordering Database Migration
+    # Subtest: should have the migration SQL file present and readable
+    ok 1 - should have the migration SQL file present and readable
+      ---
+      duration_ms: 2.244
+      type: 'test'
+      ...
+    # Subtest: should ensure numeric total_points and season_points columns exist with default 0
+    ok 2 - should ensure numeric total_points and season_points columns exist with default 0
+      ---
+      duration_ms: 0.7419
+      type: 'test'
+      ...
+    # Subtest: should create composite index on (season_points DESC, profile_id ASC)
+    ok 3 - should create composite index on (season_points DESC, profile_id ASC)
+      ---
+      duration_ms: 0.5418
+      type: 'test'
+      ...
+    # Subtest: should create composite index on (total_points DESC, profile_id ASC)
+    ok 4 - should create composite index on (total_points DESC, profile_id ASC)
+      ---
+      duration_ms: 0.4835
+      type: 'test'
+      ...
+    # Subtest: should verify deterministic tie-breaker sorting behavior with profile_id
+    ok 5 - should verify deterministic tie-breaker sorting behavior with profile_id
+      ---
+      duration_ms: 31.3515
+      type: 'test'
+      ...
+    1..5
+ok 17 - Leaderboard Ordering Database Migration
+  ---
+  duration_ms: 37.8527
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ enable debugging { debug: true }
+# Subtest: GET /api/v1/me and Current User Profile Endpoint
+    # Subtest: 1. Current-User Authentication Middleware Guard
+        # Subtest: should reject unauthenticated request with 401 Unauthorized if Authorization header is missing
+        ok 1 - should reject unauthenticated request with 401 Unauthorized if Authorization header is missing
+          ---
+          duration_ms: 2.8423
+          type: 'test'
+          ...
+        # Subtest: should reject unauthenticated request with 401 Unauthorized if token is malformed
+        ok 2 - should reject unauthenticated request with 401 Unauthorized if token is malformed
+          ---
+          duration_ms: 1.2465
+          type: 'test'
+          ...
+        # Subtest: should attach user payload to req.user and pass middleware when valid token is present
+        ok 3 - should attach user payload to req.user and pass middleware when valid token is present
+          ---
+          duration_ms: 17.2475
+          type: 'test'
+          ...
+        1..3
+    ok 1 - 1. Current-User Authentication Middleware Guard
+      ---
+      duration_ms: 22.9619
+      type: 'suite'
+      ...
+    # Subtest: 2. PlayerController.getMyProfile Endpoint Handler
+        # Subtest: should return safe profile fields for the authenticated user
+        ok 1 - should return safe profile fields for the authenticated user
+          ---
+          duration_ms: 1.3891
+          type: 'test'
+          ...
+        # Subtest: should fallback displayName to username when displayName is absent
+        ok 2 - should fallback displayName to username when displayName is absent
+          ---
+          duration_ms: 0.872
+          type: 'test'
+          ...
+        # Subtest: should return 401 if req.user is absent when controller is invoked
+        ok 3 - should return 401 if req.user is absent when controller is invoked
+          ---
+          duration_ms: 0.5893
+          type: 'test'
+          ...
+        1..3
+    ok 2 - 2. PlayerController.getMyProfile Endpoint Handler
+      ---
+      duration_ms: 3.5393
+      type: 'suite'
+      ...
+    1..2
+ok 18 - GET /api/v1/me and Current User Profile Endpoint
+  ---
+  duration_ms: 27.6768
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ override existing { override: true }
+# Subtest: GET /api/v1/me/stats and GET /api/v1/me/claims Endpoints
+    # Subtest: 1. GET /api/v1/me/stats
+        # Subtest: should reject unauthenticated request with 401 Unauthorized
+        ok 1 - should reject unauthenticated request with 401 Unauthorized
+          ---
+          duration_ms: 3.038
+          type: 'test'
+          ...
+        # Subtest: should return the authenticated user stats including all-time and weekly points, claims, and ranks
+        ok 2 - should return the authenticated user stats including all-time and weekly points, claims, and ranks
+          ---
+          duration_ms: 2.1977
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. GET /api/v1/me/stats
+      ---
+      duration_ms: 7.6811
+      type: 'suite'
+      ...
+    # Subtest: 2. GET /api/v1/me/claims
+        # Subtest: should reject unauthenticated request with 401 Unauthorized
+        ok 1 - should reject unauthenticated request with 401 Unauthorized
+          ---
+          duration_ms: 1.5408
+          type: 'test'
+          ...
+        # Subtest: should return only the authenticated user claims ordered newest first
+        ok 2 - should return only the authenticated user claims ordered newest first
+          ---
+          duration_ms: 5.0362
+          type: 'test'
+          ...
+        1..2
+    ok 2 - 2. GET /api/v1/me/claims
+      ---
+      duration_ms: 7.0586
+      type: 'suite'
+      ...
+    1..2
+ok 19 - GET /api/v1/me/stats and GET /api/v1/me/claims Endpoints
+  ---
+  duration_ms: 15.7337
+  type: 'suite'
+  ...
+# Subtest: Notification List and Unread-Count Queries
+    # Subtest: 1. getUnreadCount Database Query & Index Utilization
+        # Subtest: should return exact unread count for the given user
+        ok 1 - should return exact unread count for the given user
+          ---
+          duration_ms: 2.4697
+          type: 'test'
+          ...
+        # Subtest: should return 0 when all notifications are read or user has no notifications
+        ok 2 - should return 0 when all notifications are read or user has no notifications
+          ---
+          duration_ms: 1.2906
+          type: 'test'
+          ...
+        # Subtest: should construct efficient SQL count query filtering by user_id and read = false in PostgresNotificationRepository
+        ok 3 - should construct efficient SQL count query filtering by user_id and read = false in PostgresNotificationRepository
+          ---
+          duration_ms: 2.308
+          type: 'test'
+          ...
+        1..3
+    ok 1 - 1. getUnreadCount Database Query & Index Utilization
+      ---
+      duration_ms: 9.5206
+      type: 'suite'
+      ...
+    # Subtest: 2. findByUserId Notification List & Pagination Query
+        # Subtest: should return notifications ordered chronologically by created_at DESC (newest first)
+        ok 1 - should return notifications ordered chronologically by created_at DESC (newest first)
+          ---
+          duration_ms: 2.1463
+          type: 'test'
+          ...
+        # Subtest: should support limit and offset pagination cleanly
+        ok 2 - should support limit and offset pagination cleanly
+          ---
+          duration_ms: 27.4344
+          type: 'test'
+          ...
+        # Subtest: should construct SQL query with ORDER BY created_at DESC and LIMIT/OFFSET parameters
+        ok 3 - should construct SQL query with ORDER BY created_at DESC and LIMIT/OFFSET parameters
+          ---
+          duration_ms: 11.2097
+          type: 'test'
+          ...
+        1..3
+    ok 2 - 2. findByUserId Notification List & Pagination Query
+      ---
+      duration_ms: 41.6638
+      type: 'suite'
+      ...
+    # Subtest: 3. Clean Domain & DTO Mapping
+        # Subtest: should map notification records to clean DTOs in GetPlayerNotificationsUseCase
+        ok 1 - should map notification records to clean DTOs in GetPlayerNotificationsUseCase
+          ---
+          duration_ms: 0.8333
+          type: 'test'
+          ...
+        # Subtest: should execute GetUnreadNotificationCountUseCase cleanly
+        ok 2 - should execute GetUnreadNotificationCountUseCase cleanly
+          ---
+          duration_ms: 0.3904
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Clean Domain & DTO Mapping
+      ---
+      duration_ms: 1.7289
+      type: 'suite'
+      ...
+    1..3
+ok 20 - Notification List and Unread-Count Queries
+  ---
+  duration_ms: 54.4921
+  type: 'suite'
+  ...
+# [NotificationPersistenceHandler] Error handling CLAIM_SUCCESS event: Error: Postgres connection pool exhausted
+#     at Object.save (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\notificationPersistenceHandler.test.ts:194:17)
+#     at NotificationPersistenceHandler.handleClaimSuccess (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\NotificationPersistenceHandler.ts:120:35)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:20:15)
+#     at Array.map (<anonymous>)
+#     at InMemoryEventBus.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:18:50)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\notificationPersistenceHandler.test.ts:204:24)
+#     at waitForActual (node:assert:552:21)
+#     at Function.doesNotReject (node:assert:707:39)
+#     at TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\notificationPersistenceHandler.test.ts:203:20)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+# Subtest: NotificationPersistenceHandler for Domain Event Bus
+    # Subtest: 1. SpawnClaimedEvent -> type: CLAIM_SUCCESS, entity_type: claim, entity_id: claimId
+        # Subtest: creates a personal CLAIM_SUCCESS notification strictly for the claiming player with claim entity references
+        ok 1 - creates a personal CLAIM_SUCCESS notification strictly for the claiming player with claim entity references
+          ---
+          duration_ms: 4.2664
+          type: 'test'
+          ...
+        1..1
+    ok 1 - 1. SpawnClaimedEvent -> type: CLAIM_SUCCESS, entity_type: claim, entity_id: claimId
+      ---
+      duration_ms: 5.935
+      type: 'suite'
+      ...
+    # Subtest: 2. RankChangedEvent -> type: RANK_CHANGED, entity_type: leaderboard, entity_id: userId
+        # Subtest: creates a personal RANK_CHANGED notification strictly for the affected player with leaderboard entity references
+        ok 1 - creates a personal RANK_CHANGED notification strictly for the affected player with leaderboard entity references
+          ---
+          duration_ms: 0.9048
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. RankChangedEvent -> type: RANK_CHANGED, entity_type: leaderboard, entity_id: userId
+      ---
+      duration_ms: 1.2977
+      type: 'suite'
+      ...
+    # Subtest: 3. LeaderboardResetEvent -> type: WEEKLY_RESET, entity_type: cycle, entity_id: cycleId
+        # Subtest: creates a WEEKLY_RESET notification for all registered players with cycle entity references
+        ok 1 - creates a WEEKLY_RESET notification for all registered players with cycle entity references
+          ---
+          duration_ms: 1.7341
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. LeaderboardResetEvent -> type: WEEKLY_RESET, entity_type: cycle, entity_id: cycleId
+      ---
+      duration_ms: 2.1944
+      type: 'suite'
+      ...
+    # Subtest: 4. RotationTriggeredEvent & SpawnExpiredEvent -> Spawn Notifications
+        # Subtest: creates SPAWN_ROTATED notifications with spawn entity references
+        ok 1 - creates SPAWN_ROTATED notifications with spawn entity references
+          ---
+          duration_ms: 1.1162
+          type: 'test'
+          ...
+        # Subtest: creates SPAWN_EXPIRED notifications with spawn entity references
+        ok 2 - creates SPAWN_EXPIRED notifications with spawn entity references
+          ---
+          duration_ms: 1.4465
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. RotationTriggeredEvent & SpawnExpiredEvent -> Spawn Notifications
+      ---
+      duration_ms: 3.1402
+      type: 'suite'
+      ...
+    # Subtest: 5. Fault Tolerance & Safety
+        # Subtest: catches database errors without crashing event bus or preventing other operations
+        ok 1 - catches database errors without crashing event bus or preventing other operations
+          ---
+          duration_ms: 7.4215
+          type: 'test'
+          ...
+        # Subtest: unregisters cleanly and stops persisting events
+        ok 2 - unregisters cleanly and stops persisting events
+          ---
+          duration_ms: 0.5166
+          type: 'test'
+          ...
+        1..2
+    ok 5 - 5. Fault Tolerance & Safety
+      ---
+      duration_ms: 8.3069
+      type: 'suite'
+      ...
+    1..5
+ok 21 - NotificationPersistenceHandler for Domain Event Bus
+  ---
+  duration_ms: 24.9248
+  type: 'suite'
+  ...
+# Subtest: Notification Read/Unread Status Management
+    # Subtest: 1. Single Notification markAsRead with Strict User Isolation
+        # Subtest: should mark single notification as read and record read_at timestamp
+        ok 1 - should mark single notification as read and record read_at timestamp
+          ---
+          duration_ms: 4.6181
+          type: 'test'
+          ...
+        # Subtest: should reject marking another user notification as read with NotFoundError (user isolation)
+        ok 2 - should reject marking another user notification as read with NotFoundError (user isolation)
+          ---
+          duration_ms: 1.5548
+          type: 'test'
+          ...
+        # Subtest: should reject empty or whitespace notification ID with ValidationError
+        ok 3 - should reject empty or whitespace notification ID with ValidationError
+          ---
+          duration_ms: 0.873
+          type: 'test'
+          ...
+        1..3
+    ok 1 - 1. Single Notification markAsRead with Strict User Isolation
+      ---
+      duration_ms: 8.8792
+      type: 'suite'
+      ...
+    # Subtest: 2. Bulk markAllAsRead with User Isolation
+        # Subtest: should mark all unread notifications as read for target user and leave other users unaffected
+        ok 1 - should mark all unread notifications as read for target user and leave other users unaffected
+          ---
+          duration_ms: 2.6263
+          type: 'test'
+          ...
+        # Subtest: should return updatedCount=0 when user has no unread notifications
+        ok 2 - should return updatedCount=0 when user has no unread notifications
+          ---
+          duration_ms: 0.6887
+          type: 'test'
+          ...
+        # Subtest: should reject empty userId with ValidationError
+        ok 3 - should reject empty userId with ValidationError
+          ---
+          duration_ms: 0.5198
+          type: 'test'
+          ...
+        1..3
+    ok 2 - 2. Bulk markAllAsRead with User Isolation
+      ---
+      duration_ms: 4.556
+      type: 'suite'
+      ...
+    # Subtest: 3. PostgresNotificationRepository Query Verification
+        # Subtest: should construct markAsRead UPDATE query with strict user_id filtering
+        ok 1 - should construct markAsRead UPDATE query with strict user_id filtering
+          ---
+          duration_ms: 2.074
+          type: 'test'
+          ...
+        # Subtest: should construct markAllAsRead UPDATE query with strict user_id and read=false filtering
+        ok 2 - should construct markAllAsRead UPDATE query with strict user_id and read=false filtering
+          ---
+          duration_ms: 0.618
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. PostgresNotificationRepository Query Verification
+      ---
+      duration_ms: 3.2074
+      type: 'suite'
+      ...
+    1..3
+ok 22 - Notification Read/Unread Status Management
+  ---
+  duration_ms: 17.9671
+  type: 'suite'
+  ...
+# Subtest: Notification Database Schema & Base Repository
+    # Subtest: 1. Notification Entity Data Fields & Entity References
+        # Subtest: should create Notification entity with all required fields and entity references
+        ok 1 - should create Notification entity with all required fields and entity references
+          ---
+          duration_ms: 1.9202
+          type: 'test'
+          ...
+        # Subtest: should support markAsRead on Notification entity
+        ok 2 - should support markAsRead on Notification entity
+          ---
+          duration_ms: 0.5665
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Notification Entity Data Fields & Entity References
+      ---
+      duration_ms: 3.9855
+      type: 'suite'
+      ...
+    # Subtest: 2. PostgresNotificationRepository Base Persistence
+        # Subtest: should execute save(notification) with correct SQL parameters including entity_type and entity_id
+        ok 1 - should execute save(notification) with correct SQL parameters including entity_type and entity_id
+          ---
+          duration_ms: 1.1249
+          type: 'test'
+          ...
+        # Subtest: should execute findById and map row correctly
+        ok 2 - should execute findById and map row correctly
+          ---
+          duration_ms: 2.1871
+          type: 'test'
+          ...
+        # Subtest: should execute findByUserId with pagination and ordering
+        ok 3 - should execute findByUserId with pagination and ordering
+          ---
+          duration_ms: 0.653
+          type: 'test'
+          ...
+        # Subtest: should execute markAsRead and return updated entity
+        ok 4 - should execute markAsRead and return updated entity
+          ---
+          duration_ms: 0.6507
+          type: 'test'
+          ...
+        1..4
+    ok 2 - 2. PostgresNotificationRepository Base Persistence
+      ---
+      duration_ms: 5.3664
+      type: 'suite'
+      ...
+    # Subtest: 3. InMemoryNotificationRepository Base Persistence
+        # Subtest: should save and retrieve notification records in memory
+        ok 1 - should save and retrieve notification records in memory
+          ---
+          duration_ms: 0.6596
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. InMemoryNotificationRepository Base Persistence
+      ---
+      duration_ms: 0.9821
+      type: 'suite'
+      ...
+    1..3
+ok 23 - Notification Database Schema & Base Repository
+  ---
+  duration_ms: 11.613
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ enable debugging { debug: true }
+# Subtest: Notifications Endpoints (GET /api/v1/me/notifications, GET /api/v1/me/notifications/unread-count & POST /api/v1/notifications/read)
+    # Subtest: 1. GET /api/v1/me/notifications
+        # Subtest: should reject unauthenticated requests with 401 Unauthorized
+        ok 1 - should reject unauthenticated requests with 401 Unauthorized
+          ---
+          duration_ms: 6.4203
+          type: 'test'
+          ...
+        # Subtest: should return 401 if req.user is absent in controller handler
+        ok 2 - should return 401 if req.user is absent in controller handler
+          ---
+          duration_ms: 0.8607
+          type: 'test'
+          ...
+        # Subtest: should return only the authenticated user notifications ordered by newest first
+        ok 3 - should return only the authenticated user notifications ordered by newest first
+          ---
+          duration_ms: 10.7571
+          type: 'test'
+          ...
+        # Subtest: should correctly support limit and offset pagination parameters
+        ok 4 - should correctly support limit and offset pagination parameters
+          ---
+          duration_ms: 1.1929
+          type: 'test'
+          ...
+        1..4
+    ok 1 - 1. GET /api/v1/me/notifications
+      ---
+      duration_ms: 21.586
+      type: 'suite'
+      ...
+    # Subtest: 2. GET /api/v1/me/notifications/unread-count
+        # Subtest: should reject unauthenticated request with 401 Unauthorized
+        ok 1 - should reject unauthenticated request with 401 Unauthorized
+          ---
+          duration_ms: 2.2809
+          type: 'test'
+          ...
+        # Subtest: should return { "unreadCount": number } for authenticated user
+        ok 2 - should return { "unreadCount": number } for authenticated user
+          ---
+          duration_ms: 0.7596
+          type: 'test'
+          ...
+        # Subtest: should isolate unread count per user
+        ok 3 - should isolate unread count per user
+          ---
+          duration_ms: 0.4377
+          type: 'test'
+          ...
+        1..3
+    ok 2 - 2. GET /api/v1/me/notifications/unread-count
+      ---
+      duration_ms: 4.1778
+      type: 'suite'
+      ...
+    # Subtest: 3. POST /api/v1/notifications/read
+        # Subtest: should reject unauthenticated request with 401 Unauthorized
+        ok 1 - should reject unauthenticated request with 401 Unauthorized
+          ---
+          duration_ms: 0.6162
+          type: 'test'
+          ...
+        # Subtest: should reject empty or missing notification identifier with 400 ValidationError
+        ok 2 - should reject empty or missing notification identifier with 400 ValidationError
+          ---
+          duration_ms: 1.186
+          type: 'test'
+          ...
+        # Subtest: should return 404 if single notification does not exist
+        ok 3 - should return 404 if single notification does not exist
+          ---
+          duration_ms: 0.7317
+          type: 'test'
+          ...
+        # Subtest: should return 404 if single notification belongs to another user
+        ok 4 - should return 404 if single notification belongs to another user
+          ---
+          duration_ms: 0.453
+          type: 'test'
+          ...
+        # Subtest: should successfully mark a single notification as read by notificationId
+        ok 5 - should successfully mark a single notification as read by notificationId
+          ---
+          duration_ms: 0.7576
+          type: 'test'
+          ...
+        # Subtest: should successfully mark batch notification IDs as read via notificationIds: string[]
+        ok 6 - should successfully mark batch notification IDs as read via notificationIds: string[]
+          ---
+          duration_ms: 0.6306
+          type: 'test'
+          ...
+        # Subtest: should reject invalid notificationIds payload with 400
+        ok 7 - should reject invalid notificationIds payload with 400
+          ---
+          duration_ms: 0.4131
+          type: 'test'
+          ...
+        # Subtest: should bulk mark all user notifications as read via markAllRead: true
+        ok 8 - should bulk mark all user notifications as read via markAllRead: true
+          ---
+          duration_ms: 1.4559
+          type: 'test'
+          ...
+        1..8
+    ok 3 - 3. POST /api/v1/notifications/read
+      ---
+      duration_ms: 6.9986
+      type: 'suite'
+      ...
+    1..3
+ok 24 - Notifications Endpoints (GET /api/v1/me/notifications, GET /api/v1/me/notifications/unread-count & POST /api/v1/notifications/read)
+  ---
+  duration_ms: 33.8313
+  type: 'suite'
+  ...
+# Subtest: Current Player Rank Queries
+    # Subtest: 1. should calculate weekly rank accurately for top player
+    ok 1 - 1. should calculate weekly rank accurately for top player
+      ---
+      duration_ms: 2.7625
+      type: 'test'
+      ...
+    # Subtest: 2. should deterministically break tie for tied players
+    ok 2 - 2. should deterministically break tie for tied players
+      ---
+      duration_ms: 38.1269
+      type: 'test'
+      ...
+    # Subtest: 3. should calculate rank accurately for players with zero points
+    ok 3 - 3. should calculate rank accurately for players with zero points
+      ---
+      duration_ms: 0.6378
+      type: 'test'
+      ...
+    # Subtest: 4. should return null for non-existent player
+    ok 4 - 4. should return null for non-existent player
+      ---
+      duration_ms: 0.6685
+      type: 'test'
+      ...
+    # Subtest: 5. should fetch both weekly and all-time ranks via getPlayerRanks and controller endpoint
+    ok 5 - 5. should fetch both weekly and all-time ranks via getPlayerRanks and controller endpoint
+      ---
+      duration_ms: 1.5942
+      type: 'test'
+      ...
+    1..5
+ok 25 - Current Player Rank Queries
+  ---
+  duration_ms: 52.1419
+  type: 'suite'
+  ...
+# Subtest: PostgresLeaderboardRepository Player Rank SQL Query Construction
+    # Subtest: should construct SQL query calculating rank using higher points, lower profile_id tie-breaker, and COALESCE
+    ok 1 - should construct SQL query calculating rank using higher points, lower profile_id tie-breaker, and COALESCE
+      ---
+      duration_ms: 0.7143
+      type: 'test'
+      ...
+    1..1
+ok 26 - PostgresLeaderboardRepository Player Rank SQL Query Construction
+  ---
+  duration_ms: 1.1932
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîü auth for agents [www.vestauth.com]
+# Subtest: PATCH /api/v1/me/preferences Endpoint & Use Case
+    # Subtest: 1. Authentication Guard
+        # Subtest: should return 401 if unauthenticated request attempts to patch preferences
+        ok 1 - should return 401 if unauthenticated request attempts to patch preferences
+          ---
+          duration_ms: 3.7408
+          type: 'test'
+          ...
+        # Subtest: should return 401 if req.user is absent in controller handler
+        ok 2 - should return 401 if req.user is absent in controller handler
+          ---
+          duration_ms: 0.8142
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Authentication Guard
+      ---
+      duration_ms: 6.1444
+      type: 'suite'
+      ...
+    # Subtest: 2. Request Body Validation (Shallow JSON Enforcement)
+        # Subtest: should reject non-object body (array) with 400 ValidationError
+        ok 1 - should reject non-object body (array) with 400 ValidationError
+          ---
+          duration_ms: 1.4714
+          type: 'test'
+          ...
+        # Subtest: should reject null body with 400 ValidationError
+        ok 2 - should reject null body with 400 ValidationError
+          ---
+          duration_ms: 0.8398
+          type: 'test'
+          ...
+        # Subtest: should reject empty object body with 400 ValidationError
+        ok 3 - should reject empty object body with 400 ValidationError
+          ---
+          duration_ms: 1.1952
+          type: 'test'
+          ...
+        # Subtest: should reject nested object values with 400 ValidationError
+        ok 4 - should reject nested object values with 400 ValidationError
+          ---
+          duration_ms: 4.0043
+          type: 'test'
+          ...
+        # Subtest: should reject array values with 400 ValidationError
+        ok 5 - should reject array values with 400 ValidationError
+          ---
+          duration_ms: 1.0079
+          type: 'test'
+          ...
+        1..5
+    ok 2 - 2. Request Body Validation (Shallow JSON Enforcement)
+      ---
+      duration_ms: 9.6969
+      type: 'suite'
+      ...
+    # Subtest: 3. Successful Preference Updates & Isolation
+        # Subtest: should update and merge shallow preferences for the authenticated user only
+        ok 1 - should update and merge shallow preferences for the authenticated user only
+          ---
+          duration_ms: 2.6013
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. Successful Preference Updates & Isolation
+      ---
+      duration_ms: 2.9066
+      type: 'suite'
+      ...
+    1..3
+ok 27 - PATCH /api/v1/me/preferences Endpoint & Use Case
+  ---
+  duration_ms: 20.1239
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ multiple files { path: ['.env.local', '.env'] }
+# [PushDeliveryService] Duplicate push suppressed for key: dedup:user-dedup-a:CLAIM_SUCCESS:claim-101
+# [PushDeliveryService] Rate limit exceeded for user user-dedup-a (max 3 per 60000ms)
+# [PushDeliveryService] Duplicate push suppressed for key: dedup:user-dedup-a:CLAIM_SUCCESS:claim-bus-dup-1
+# Subtest: Web Push Deduplication and Spam Prevention
+    # Subtest: 1. Deduplication (Same User + Same Event Type + Same Entity)
+        # Subtest: should allow first notification and suppress duplicate notification within dedup window
+        ok 1 - should allow first notification and suppress duplicate notification within dedup window
+          ---
+          duration_ms: 5.56
+          type: 'test'
+          ...
+        # Subtest: should allow same event type with a different entity ID to the same user
+        ok 2 - should allow same event type with a different entity ID to the same user
+          ---
+          duration_ms: 0.9554
+          type: 'test'
+          ...
+        # Subtest: should allow the same event and entity to a different user without deduplication conflict
+        ok 3 - should allow the same event and entity to a different user without deduplication conflict
+          ---
+          duration_ms: 1.1935
+          type: 'test'
+          ...
+        1..3
+    ok 1 - 1. Deduplication (Same User + Same Event Type + Same Entity)
+      ---
+      duration_ms: 10.121
+      type: 'suite'
+      ...
+    # Subtest: 2. Per-User Rolling Rate Limiting
+        # Subtest: should throttle and prevent spam when notifications exceed rate limit in rolling window
+        ok 1 - should throttle and prevent spam when notifications exceed rate limit in rolling window
+          ---
+          duration_ms: 2.0484
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Per-User Rolling Rate Limiting
+      ---
+      duration_ms: 2.552
+      type: 'suite'
+      ...
+    # Subtest: 3. Deduplication & Rate Limit State Cleanup (Bounded Memory)
+        # Subtest: should prune expired entries and allow re-sending after dedup window has elapsed
+        ok 1 - should prune expired entries and allow re-sending after dedup window has elapsed
+          ---
+          duration_ms: 1.2976
+          type: 'test'
+          ...
+        # Subtest: should prune expired timestamps from rate limiter store
+        ok 2 - should prune expired timestamps from rate limiter store
+          ---
+          duration_ms: 0.7647
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Deduplication & Rate Limit State Cleanup (Bounded Memory)
+      ---
+      duration_ms: 2.6473
+      type: 'suite'
+      ...
+    # Subtest: 4. EventBus Fan-Out Integration with Deduplication & Rate Limiting
+        # Subtest: should automatically deduplicate repeated domain events published to EventBus
+        ok 1 - should automatically deduplicate repeated domain events published to EventBus
+          ---
+          duration_ms: 6.4444
+          type: 'test'
+          ...
+        1..1
+    ok 4 - 4. EventBus Fan-Out Integration with Deduplication & Rate Limiting
+      ---
+      duration_ms: 10.689
+      type: 'suite'
+      ...
+    1..4
+ok 28 - Web Push Deduplication and Spam Prevention
+  ---
+  duration_ms: 27.6014
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ multiple files { path: ['.env.local', '.env'] }
+# [PushDeliveryService] Failed to configure VAPID credentials: Error: Vapid public key should be 65 bytes long when decoded.
+#     at Object.validatePublicKey (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\node_modules\\web-push\\src\\vapid-helper.js:111:11)
+#     at WebPushLib.setVapidDetails (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\node_modules\\web-push\\src\\web-push-lib.js:60:17)
+#     at PushDeliveryService.initVapid (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\PushDeliveryService.ts:135:17)
+#     at new PushDeliveryService (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\services\\PushDeliveryService.ts:129:10)
+#     at TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\pushDeliveryService.test.ts:103:31)
+#     at Test.runInAsyncScope (node:async_hooks:214:14)
+#     at Test.run (node:internal/test_runner/test:1047:25)
+#     at async Promise.all (index 0)
+#     at async Suite.run (node:internal/test_runner/test:1442:7)
+#     at async Promise.all (index 0)
+# [PushDeliveryService] Push endpoint returned 410 (invalid/expired), removing subscription: https://fcm.googleapis.com/fcm/send/token-desktop
+# [PushDeliveryService] Push endpoint returned 404 (invalid/expired), removing subscription: https://fcm.googleapis.com/fcm/send/token-mobile
+# [PushDeliveryService] Error dispatching push to https://fcm.googleapis.com/fcm/send/token-desktop: FCM Internal Server Error 500
+# Subtest: PushDeliveryService - Core Web Push Delivery
+    # Subtest: 1. Successful Delivery to User Subscriptions
+        # Subtest: should deliver notification to all subscriptions of a target user
+        ok 1 - should deliver notification to all subscriptions of a target user
+          ---
+          duration_ms: 7.5647
+          type: 'test'
+          ...
+        1..1
+    ok 1 - 1. Successful Delivery to User Subscriptions
+      ---
+      duration_ms: 9.103
+      type: 'suite'
+      ...
+    # Subtest: 2. User Notification Preference Guard
+        # Subtest: should skip sending and return skipped=true when user has push notifications disabled
+        ok 1 - should skip sending and return skipped=true when user has push notifications disabled
+          ---
+          duration_ms: 0.9074
+          type: 'test'
+          ...
+        # Subtest: should support alternative preference key conventions (pushNotifications: false, notificationsEnabled: false)
+        ok 2 - should support alternative preference key conventions (pushNotifications: false, notificationsEnabled: false)
+          ---
+          duration_ms: 1.2071
+          type: 'test'
+          ...
+        1..2
+    ok 2 - 2. User Notification Preference Guard
+      ---
+      duration_ms: 2.5894
+      type: 'suite'
+      ...
+    # Subtest: 3. Automatic Removal of Invalid Subscriptions (404/410)
+        # Subtest: should remove subscription when push service returns HTTP 410 Gone
+        ok 1 - should remove subscription when push service returns HTTP 410 Gone
+          ---
+          duration_ms: 1.6563
+          type: 'test'
+          ...
+        # Subtest: should remove subscription when push service returns HTTP 404 Not Found
+        ok 2 - should remove subscription when push service returns HTTP 404 Not Found
+          ---
+          duration_ms: 1.088
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Automatic Removal of Invalid Subscriptions (404/410)
+      ---
+      duration_ms: 3.109
+      type: 'suite'
+      ...
+    # Subtest: 4. Fault Isolation & Error Handling
+        # Subtest: should not block delivery to other subscriptions when one subscription throws a 500 server error
+        ok 1 - should not block delivery to other subscriptions when one subscription throws a 500 server error
+          ---
+          duration_ms: 1.2126
+          type: 'test'
+          ...
+        # Subtest: should handle invalid user ID and missing subscriptions gracefully without throwing
+        ok 2 - should handle invalid user ID and missing subscriptions gracefully without throwing
+          ---
+          duration_ms: 0.6322
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. Fault Isolation & Error Handling
+      ---
+      duration_ms: 2.3672
+      type: 'suite'
+      ...
+    1..4
+ok 29 - PushDeliveryService - Core Web Push Delivery
+  ---
+  duration_ms: 19.5318
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ custom filepath { path: '/custom/path/.env' }
+# Subtest: Push Subscription Endpoints (POST & DELETE /api/v1/push/subscribe)
+    # Subtest: 1. POST /api/v1/push/subscribe
+        # Subtest: should reject unauthenticated requests with 401 Unauthorized via middleware
+        ok 1 - should reject unauthenticated requests with 401 Unauthorized via middleware
+          ---
+          duration_ms: 2.2217
+          type: 'test'
+          ...
+        # Subtest: should return 401 if req.user is absent in controller handler
+        ok 2 - should return 401 if req.user is absent in controller handler
+          ---
+          duration_ms: 0.4607
+          type: 'test'
+          ...
+        # Subtest: should reject missing or empty endpoint with 400 ValidationError
+        ok 3 - should reject missing or empty endpoint with 400 ValidationError
+          ---
+          duration_ms: 1.1572
+          type: 'test'
+          ...
+        # Subtest: should reject non-HTTP/HTTPS endpoint with 400 ValidationError
+        ok 4 - should reject non-HTTP/HTTPS endpoint with 400 ValidationError
+          ---
+          duration_ms: 1.0026
+          type: 'test'
+          ...
+        # Subtest: should reject missing p256dh key with 400 ValidationError
+        ok 5 - should reject missing p256dh key with 400 ValidationError
+          ---
+          duration_ms: 0.9034
+          type: 'test'
+          ...
+        # Subtest: should reject missing auth key with 400 ValidationError
+        ok 6 - should reject missing auth key with 400 ValidationError
+          ---
+          duration_ms: 0.5762
+          type: 'test'
+          ...
+        # Subtest: should successfully store a new standard W3C push subscription
+        ok 7 - should successfully store a new standard W3C push subscription
+          ---
+          duration_ms: 1.8817
+          type: 'test'
+          ...
+        # Subtest: should successfully store flat push subscription payload
+        ok 8 - should successfully store flat push subscription payload
+          ---
+          duration_ms: 0.4298
+          type: 'test'
+          ...
+        # Subtest: should update existing subscription on duplicate endpoint instead of creating duplicate rows
+        ok 9 - should update existing subscription on duplicate endpoint instead of creating duplicate rows
+          ---
+          duration_ms: 0.6443
+          type: 'test'
+          ...
+        1..9
+    ok 1 - 1. POST /api/v1/push/subscribe
+      ---
+      duration_ms: 10.8965
+      type: 'suite'
+      ...
+    # Subtest: 2. DELETE /api/v1/push/subscribe
+        # Subtest: should reject unauthenticated request with 401 Unauthorized via middleware
+        ok 1 - should reject unauthenticated request with 401 Unauthorized via middleware
+          ---
+          duration_ms: 0.6189
+          type: 'test'
+          ...
+        # Subtest: should reject request missing endpoint or id with 400 ValidationError
+        ok 2 - should reject request missing endpoint or id with 400 ValidationError
+          ---
+          duration_ms: 0.7853
+          type: 'test'
+          ...
+        # Subtest: should return 404 when subscription endpoint does not exist
+        ok 3 - should return 404 when subscription endpoint does not exist
+          ---
+          duration_ms: 0.411
+          type: 'test'
+          ...
+        # Subtest: should return 404 when attempting to delete another user subscription (user isolation)
+        ok 4 - should return 404 when attempting to delete another user subscription (user isolation)
+          ---
+          duration_ms: 0.314
+          type: 'test'
+          ...
+        # Subtest: should successfully delete subscription by endpoint for authenticated user
+        ok 5 - should successfully delete subscription by endpoint for authenticated user
+          ---
+          duration_ms: 0.301
+          type: 'test'
+          ...
+        # Subtest: should successfully delete subscription by id or query param for authenticated user
+        ok 6 - should successfully delete subscription by id or query param for authenticated user
+          ---
+          duration_ms: 0.303
+          type: 'test'
+          ...
+        1..6
+    ok 2 - 2. DELETE /api/v1/push/subscribe
+      ---
+      duration_ms: 3.1193
+      type: 'suite'
+      ...
+    # Subtest: 3. App Integration & Route Wiring
+        # Subtest: should mount push routes under /api/v1/push and handle requests in full app setup
+        ok 1 - should mount push routes under /api/v1/push and handle requests in full app setup
+          ---
+          duration_ms: 20.502
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. App Integration & Route Wiring
+      ---
+      duration_ms: 20.6273
+      type: 'suite'
+      ...
+    1..3
+ok 30 - Push Subscription Endpoints (POST & DELETE /api/v1/push/subscribe)
+  ---
+  duration_ms: 35.3366
+  type: 'suite'
+  ...
+# Subtest: Push Subscription Validation and Invalid-Subscription Cleanup
+    # Subtest: 1. Schema Validation (PushSubscriptionSchema)
+        # Subtest: should validate valid W3C nested payload with no issues
+        ok 1 - should validate valid W3C nested payload with no issues
+          ---
+          duration_ms: 3.0352
+          type: 'test'
+          ...
+        # Subtest: should validate valid flat payload with no issues
+        ok 2 - should validate valid flat payload with no issues
+          ---
+          duration_ms: 0.5302
+          type: 'test'
+          ...
+        # Subtest: should report issue for missing or empty endpoint
+        ok 3 - should report issue for missing or empty endpoint
+          ---
+          duration_ms: 0.7538
+          type: 'test'
+          ...
+        # Subtest: should report issue for non-HTTP/HTTPS endpoint URLs
+        ok 4 - should report issue for non-HTTP/HTTPS endpoint URLs
+          ---
+          duration_ms: 0.6336
+          type: 'test'
+          ...
+        # Subtest: should report issue for missing p256dh or auth keys
+        ok 5 - should report issue for missing p256dh or auth keys
+          ---
+          duration_ms: 0.9022
+          type: 'test'
+          ...
+        # Subtest: should report issue when keys are empty strings
+        ok 6 - should report issue when keys are empty strings
+          ---
+          duration_ms: 0.5369
+          type: 'test'
+          ...
+        1..6
+    ok 1 - 1. Schema Validation (PushSubscriptionSchema)
+      ---
+      duration_ms: 8.4958
+      type: 'suite'
+      ...
+    # Subtest: 2. SavePushSubscriptionUseCase Validation Enforcement
+        # Subtest: should reject malformed or incomplete payload with ValidationError
+        ok 1 - should reject malformed or incomplete payload with ValidationError
+          ---
+          duration_ms: 5.4205
+          type: 'test'
+          ...
+        # Subtest: should successfully store valid subscription and return summary
+        ok 2 - should successfully store valid subscription and return summary
+          ---
+          duration_ms: 2.7268
+          type: 'test'
+          ...
+        1..2
+    ok 2 - 2. SavePushSubscriptionUseCase Validation Enforcement
+      ---
+      duration_ms: 9.7646
+      type: 'suite'
+      ...
+    # Subtest: 3. Removing Subscriptions by Endpoint (Repository & Use Cases)
+        # Subtest: should remove subscription by endpoint in InMemory repository
+        ok 1 - should remove subscription by endpoint in InMemory repository
+          ---
+          duration_ms: 1.1598
+          type: 'test'
+          ...
+        # Subtest: should execute deleteByEndpoint via DeletePushSubscriptionUseCase
+        ok 2 - should execute deleteByEndpoint via DeletePushSubscriptionUseCase
+          ---
+          duration_ms: 0.6292
+          type: 'test'
+          ...
+        # Subtest: should verify PostgresPushSubscriptionRepository.deleteByEndpoint query
+        ok 3 - should verify PostgresPushSubscriptionRepository.deleteByEndpoint query
+          ---
+          duration_ms: 2.0635
+          type: 'test'
+          ...
+        1..3
+    ok 3 - 3. Removing Subscriptions by Endpoint (Repository & Use Cases)
+      ---
+      duration_ms: 4.2761
+      type: 'suite'
+      ...
+    # Subtest: 4. Cleanup of Invalid / Expired Push Subscriptions (CleanupPushSubscriptionUseCase)
+        # Subtest: should detect RFC 8030 invalid/expired status codes (404 Not Found, 410 Gone)
+        ok 1 - should detect RFC 8030 invalid/expired status codes (404 Not Found, 410 Gone)
+          ---
+          duration_ms: 1.1506
+          type: 'test'
+          ...
+        # Subtest: should remove expired subscription when cleanup is executed
+        ok 2 - should remove expired subscription when cleanup is executed
+          ---
+          duration_ms: 0.6072
+          type: 'test'
+          ...
+        # Subtest: should cleanup only when error is recognized as invalid subscription
+        ok 3 - should cleanup only when error is recognized as invalid subscription
+          ---
+          duration_ms: 0.597
+          type: 'test'
+          ...
+        # Subtest: should throw ValidationError if cleanup is invoked without endpoint
+        ok 4 - should throw ValidationError if cleanup is invoked without endpoint
+          ---
+          duration_ms: 0.7208
+          type: 'test'
+          ...
+        1..4
+    ok 4 - 4. Cleanup of Invalid / Expired Push Subscriptions (CleanupPushSubscriptionUseCase)
+      ---
+      duration_ms: 3.481
+      type: 'suite'
+      ...
+    1..4
+ok 31 - Push Subscription Validation and Invalid-Subscription Cleanup
+  ---
+  duration_ms: 27.3325
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ multiple files { path: ['.env.local', '.env'] }
+# [WebPushHandler] Error dispatching push to https://fcm.googleapis.com/fcm/send/sub_01: Error: FCM / VAPID transport endpoint unreachable
+#     at Object.sendPush (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\realtimeAndWebPushHandlers.test.ts:262:17)
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\WebPushHandler.ts:132:28)
+#     at Array.map (<anonymous>)
+#     at WebPushHandler.dispatchToUser (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\WebPushHandler.ts:131:23)
+#     at async WebPushHandler.handleClaimSuccess (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\handlers\\WebPushHandler.ts:233:7)
+#     at async <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:20:9)
+#     at async Promise.all (index 2)
+#     at async InMemoryEventBus.publish (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\events\\EventBus.ts:26:5)
+#     at async <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\realtimeAndWebPushHandlers.test.ts:271:9)
+#     at async waitForActual (node:assert:566:5)
+# Subtest: Realtime & Web Push Handlers for Domain Event System
+    # Subtest: 1. RealtimeEventHandler Socket.IO Fan-Out
+        # Subtest: SPAWN_ROTATED: broadcasts spawn:batch_created to campus_global with minimal delta
+        ok 1 - SPAWN_ROTATED: broadcasts spawn:batch_created to campus_global with minimal delta
+          ---
+          duration_ms: 5.6889
+          type: 'test'
+          ...
+        # Subtest: SPAWN_EXPIRED: broadcasts spawn:expired delta to campus_global
+        ok 2 - SPAWN_EXPIRED: broadcasts spawn:expired delta to campus_global
+          ---
+          duration_ms: 2.6637
+          type: 'test'
+          ...
+        # Subtest: CLAIM_SUCCESS: broadcasts anonymous claim:success to campus_global and personal receipt to user room
+        ok 3 - CLAIM_SUCCESS: broadcasts anonymous claim:success to campus_global and personal receipt to user room
+          ---
+          duration_ms: 1.6247
+          type: 'test'
+          ...
+        # Subtest: RANK_CHANGED: broadcasts minimal player rank delta update to campus_global
+        ok 4 - RANK_CHANGED: broadcasts minimal player rank delta update to campus_global
+          ---
+          duration_ms: 1.2983
+          type: 'test'
+          ...
+        # Subtest: WEEKLY_RESET: broadcasts leaderboard:weekly_reset to campus_global
+        ok 5 - WEEKLY_RESET: broadcasts leaderboard:weekly_reset to campus_global
+          ---
+          duration_ms: 1.5697
+          type: 'test'
+          ...
+        1..5
+    ok 1 - 1. RealtimeEventHandler Socket.IO Fan-Out
+      ---
+      duration_ms: 14.9436
+      type: 'suite'
+      ...
+    # Subtest: 2. WebPushHandler Push Notifications
+        # Subtest: CLAIM_SUCCESS: dispatches push notification ONLY to subscriptions of the claiming player
+        ok 1 - CLAIM_SUCCESS: dispatches push notification ONLY to subscriptions of the claiming player
+          ---
+          duration_ms: 4.715
+          type: 'test'
+          ...
+        # Subtest: RANK_CHANGED: dispatches personal push notification ONLY to subscriptions of the affected player
+        ok 2 - RANK_CHANGED: dispatches personal push notification ONLY to subscriptions of the affected player
+          ---
+          duration_ms: 2.2516
+          type: 'test'
+          ...
+        # Subtest: SPAWN_ROTATED: dispatches push notification to all subscribed players
+        ok 3 - SPAWN_ROTATED: dispatches push notification to all subscribed players
+          ---
+          duration_ms: 1.2043
+          type: 'test'
+          ...
+        # Subtest: RESET_APPROACHING: dispatches reminder push notification to all subscribed players
+        ok 4 - RESET_APPROACHING: dispatches reminder push notification to all subscribed players
+          ---
+          duration_ms: 1.4127
+          type: 'test'
+          ...
+        # Subtest: WEEKLY_RESET: dispatches weekly reset announcement push notification to all subscribed players
+        ok 5 - WEEKLY_RESET: dispatches weekly reset announcement push notification to all subscribed players
+          ---
+          duration_ms: 0.7834
+          type: 'test'
+          ...
+        1..5
+    ok 2 - 2. WebPushHandler Push Notifications
+      ---
+      duration_ms: 11.3332
+      type: 'suite'
+      ...
+    # Subtest: 3. Fault Isolation & Cross-Handler Independence
+        # Subtest: failures in Web Push dispatch do NOT crash RealtimeEventHandler or EventBus
+        ok 1 - failures in Web Push dispatch do NOT crash RealtimeEventHandler or EventBus
+          ---
+          duration_ms: 4.7849
+          type: 'test'
+          ...
+        # Subtest: unsubscribing cleanly stops event dispatching
+        ok 2 - unsubscribing cleanly stops event dispatching
+          ---
+          duration_ms: 0.6223
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Fault Isolation & Cross-Handler Independence
+      ---
+      duration_ms: 5.6904
+      type: 'suite'
+      ...
+    1..3
+ok 32 - Realtime & Web Push Handlers for Domain Event System
+  ---
+  duration_ms: 33.1925
+  type: 'suite'
+  ...
+# Subtest: ResetWeeklyCycle Core Operation
+    # Subtest: 1. Core Reset Execution Requirements
+        # Subtest: should reset weekly scores to 0, record reset event, complete current cycle, and start next cycle
+        ok 1 - should reset weekly scores to 0, record reset event, complete current cycle, and start next cycle
+          ---
+          duration_ms: 38.6336
+          type: 'test'
+          ...
+        # Subtest: should support manual resets with triggeredByProfileId
+        ok 2 - should support manual resets with triggeredByProfileId
+          ---
+          duration_ms: 0.9057
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Core Reset Execution Requirements
+      ---
+      duration_ms: 41.6016
+      type: 'suite'
+      ...
+    # Subtest: 2. Idempotency & Duplicate Reset Protection
+        # Subtest: should detect duplicate resetKey and return no-op without re-resetting scores or creating multiple cycles
+        ok 1 - should detect duplicate resetKey and return no-op without re-resetting scores or creating multiple cycles
+          ---
+          duration_ms: 3.2805
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Idempotency & Duplicate Reset Protection
+      ---
+      duration_ms: 3.5608
+      type: 'suite'
+      ...
+    # Subtest: 3. Transaction & Complete Rollback Verification
+        # Subtest: should roll back completely and leave state intact if an error occurs during transaction
+        ok 1 - should roll back completely and leave state intact if an error occurs during transaction
+          ---
+          duration_ms: 11.4611
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. Transaction & Complete Rollback Verification
+      ---
+      duration_ms: 11.8739
+      type: 'suite'
+      ...
+    # Subtest: 4. PostgresWeeklyCycleRepository SQL Generation & Locking
+        # Subtest: should use FOR UPDATE row lock when querying active cycle inside transaction
+        ok 1 - should use FOR UPDATE row lock when querying active cycle inside transaction
+          ---
+          duration_ms: 1.4901
+          type: 'test'
+          ...
+        # Subtest: should use ON CONFLICT (reset_key) DO NOTHING when recording reset event
+        ok 2 - should use ON CONFLICT (reset_key) DO NOTHING when recording reset event
+          ---
+          duration_ms: 1.0503
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. PostgresWeeklyCycleRepository SQL Generation & Locking
+      ---
+      duration_ms: 3.9121
+      type: 'suite'
+      ...
+    1..4
+ok 33 - ResetWeeklyCycle Core Operation
+  ---
+  duration_ms: 63.4104
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γîÿ custom filepath { path: '/custom/path/.env' }
+# Subtest: Socket.IO Server Setup & Connection Authentication
+    # Subtest: should reject unauthenticated connection attempts (missing token)
+    ok 1 - should reject unauthenticated connection attempts (missing token)
+      ---
+      duration_ms: 35.8955
+      type: 'test'
+      ...
+    # Subtest: should reject connections with an expired JWT token
+    ok 2 - should reject connections with an expired JWT token
+      ---
+      duration_ms: 10.9995
+      type: 'test'
+      ...
+    # Subtest: should reject connections with an invalid token signature
+    ok 3 - should reject connections with an invalid token signature
+      ---
+      duration_ms: 7.1156
+      type: 'test'
+      ...
+# [Socket.IO] Client connected: socket=mHKSf_P72mJgp-RWAAAD, user=player_ws_001 (alex_runner)
+    # Subtest: should successfully authenticate via handshake auth.token and attach socket.data
+    ok 4 - should successfully authenticate via handshake auth.token and attach socket.data
+      ---
+      duration_ms: 8.6302
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=mHKSf_P72mJgp-RWAAAD, user=player_ws_001 (reason: client namespace disconnect)
+# [Socket.IO] Client connected: socket=FHFH-qT8yQGWhfiwAAAE, user=admin_ws_002 (campus_admin)
+    # Subtest: should successfully authenticate via Authorization header
+    ok 5 - should successfully authenticate via Authorization header
+      ---
+      duration_ms: 8.0907
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=FHFH-qT8yQGWhfiwAAAE, user=admin_ws_002 (reason: client namespace disconnect)
+# [Socket.IO] Client connected: socket=HaKqGztnyl047qrsAAAF, user=player_ws_001 (alex_runner)
+# [Socket.IO] Client disconnected: socket=HaKqGztnyl047qrsAAAF, user=player_ws_001 (reason: client namespace disconnect)
+    # Subtest: should clean up in-memory tracking on disconnect
+    ok 6 - should clean up in-memory tracking on disconnect
+      ---
+      duration_ms: 58.9554
+      type: 'test'
+      ...
+# [Socket.IO] Client connected: socket=7cZNNkE5ABIqOQGbAAAG, user=player_ws_001 (alex_runner)
+    # Subtest: should automatically join campus_global and user:<userId> rooms upon connection
+    ok 7 - should automatically join campus_global and user:<userId> rooms upon connection
+      ---
+      duration_ms: 5.954
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=7cZNNkE5ABIqOQGbAAAG, user=player_ws_001 (reason: client namespace disconnect)
+# [Socket.IO] Client connected: socket=5XgxEY3sl750J_gPAAAH, user=admin_ws_002 (campus_admin)
+    # Subtest: should automatically join admin room if connected user is an admin
+    ok 8 - should automatically join admin room if connected user is an admin
+      ---
+      duration_ms: 6.4359
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=5XgxEY3sl750J_gPAAAH, user=admin_ws_002 (reason: client namespace disconnect)
+# [Socket.IO] Client connected: socket=7-LrJeEFPDuTT4oUAAAI, user=player_ws_001 (alex_runner)
+    # Subtest: should NOT emit full-state dump events on initial connection
+    ok 9 - should NOT emit full-state dump events on initial connection
+      ---
+      duration_ms: 98.9027
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=7-LrJeEFPDuTT4oUAAAI, user=player_ws_001 (reason: client namespace disconnect)
+# [Socket.IO] Client connected: socket=jw_eqmieCdYsz4YKAAAJ, user=player_ws_001 (alex_runner)
+    # Subtest: should support dynamic zone room join and leave events with acknowledgements
+    ok 10 - should support dynamic zone room join and leave events with acknowledgements
+      ---
+      duration_ms: 11.0743
+      type: 'test'
+      ...
+# [Socket.IO] Client disconnected: socket=jw_eqmieCdYsz4YKAAAJ, user=player_ws_001 (reason: client namespace disconnect)
+# [HTTP] GET /api/health -> 200 (5ms)
+    # Subtest: should verify Express HTTP routes continue operating alongside Socket.IO
+    ok 11 - should verify Express HTTP routes continue operating alongside Socket.IO
+      ---
+      duration_ms: 30.6647
+      type: 'test'
+      ...
+    1..11
+ok 34 - Socket.IO Server Setup & Connection Authentication
+  ---
+  duration_ms: 313.5621
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γùê secrets for agents [www.dotenvx.com]
+# Subtest: Spawn Endpoints (GET /api/v1/spawns/active & GET /api/v1/spawns/:id)
+    # Subtest: 1. GET /api/v1/spawns/active
+        # Subtest: should return only active, enabled, non-expired spawns
+        ok 1 - should return only active, enabled, non-expired spawns
+          ---
+          duration_ms: 3.4164
+          type: 'test'
+          ...
+        # Subtest: should return only safe public spawn fields and avoid leaking internal fields
+        ok 2 - should return only safe public spawn fields and avoid leaking internal fields
+          ---
+          duration_ms: 1.8625
+          type: 'test'
+          ...
+        # Subtest: should return empty array when there are no active spawns
+        ok 3 - should return empty array when there are no active spawns
+          ---
+          duration_ms: 0.4396
+          type: 'test'
+          ...
+        # Subtest: should support bounding box pre-filtering when bounds are supplied
+        ok 4 - should support bounding box pre-filtering when bounds are supplied
+          ---
+          duration_ms: 0.6778
+          type: 'test'
+          ...
+        1..4
+    ok 1 - 1. GET /api/v1/spawns/active
+      ---
+      duration_ms: 7.8143
+      type: 'suite'
+      ...
+    # Subtest: 2. GET /api/v1/spawns/:id
+        # Subtest: should return single spawn details by ID
+        ok 1 - should return single spawn details by ID
+          ---
+          duration_ms: 0.9139
+          type: 'test'
+          ...
+        # Subtest: should return 404 NotFoundError when spawn ID does not exist
+        ok 2 - should return 404 NotFoundError when spawn ID does not exist
+          ---
+          duration_ms: 0.5996
+          type: 'test'
+          ...
+        # Subtest: should return 404 NotFoundError when spawn ID is empty string
+        ok 3 - should return 404 NotFoundError when spawn ID is empty string
+          ---
+          duration_ms: 0.3386
+          type: 'test'
+          ...
+        1..3
+    ok 2 - 2. GET /api/v1/spawns/:id
+      ---
+      duration_ms: 2.2999
+      type: 'suite'
+      ...
+    # Subtest: 3. App Integration & Route Mounting
+        # Subtest: should mount spawns router and handle active and id routes in full app
+        ok 1 - should mount spawns router and handle active and id routes in full app
+          ---
+          duration_ms: 17.2087
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. App Integration & Route Mounting
+      ---
+      duration_ms: 17.3941
+      type: 'suite'
+      ...
+    1..3
+ok 35 - Spawn Endpoints (GET /api/v1/spawns/active & GET /api/v1/spawns/:id)
+  ---
+  duration_ms: 28.2441
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+# Subtest: POST /api/v1/claims Endpoint and Duplicate Protection
+    # Subtest: 1. Authentication Guard
+        # Subtest: should reject unauthenticated request with 401 Unauthorized via middleware
+        ok 1 - should reject unauthenticated request with 401 Unauthorized via middleware
+          ---
+          duration_ms: 3.3625
+          type: 'test'
+          ...
+        # Subtest: should return 401 if req.user and req.body.playerId are absent in controller
+        ok 2 - should return 401 if req.user and req.body.playerId are absent in controller
+          ---
+          duration_ms: 0.9059
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Authentication Guard
+      ---
+      duration_ms: 6.084
+      type: 'suite'
+      ...
+    # Subtest: 2. Request Validation
+        # Subtest: should reject missing spawnId with 400 ValidationError
+        ok 1 - should reject missing spawnId with 400 ValidationError
+          ---
+          duration_ms: 1.3674
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Request Validation
+      ---
+      duration_ms: 1.7364
+      type: 'suite'
+      ...
+    # Subtest: 3. Successful Claim Execution
+        # Subtest: should successfully submit claim for current authenticated user and award points exactly once
+        ok 1 - should successfully submit claim for current authenticated user and award points exactly once
+          ---
+          duration_ms: 4.3805
+          type: 'test'
+          ...
+        # Subtest: should support minimal request body with spawnId only and default to spawn coordinates
+        ok 2 - should support minimal request body with spawnId only and default to spawn coordinates
+          ---
+          duration_ms: 1.3307
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Successful Claim Execution
+      ---
+      duration_ms: 6.1973
+      type: 'suite'
+      ...
+    # Subtest: 4. Duplicate Claim Rejection & Concurrency Protection
+        # Subtest: should reject a second duplicate claim attempt with controlled 409 ALREADY_CLAIMED error without altering points
+        ok 1 - should reject a second duplicate claim attempt with controlled 409 ALREADY_CLAIMED error without altering points
+          ---
+          duration_ms: 1.4462
+          type: 'test'
+          ...
+        # Subtest: should handle simultaneous concurrent claim requests allowing only 1 winner
+        ok 2 - should handle simultaneous concurrent claim requests allowing only 1 winner
+          ---
+          duration_ms: 2.3857
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. Duplicate Claim Rejection & Concurrency Protection
+      ---
+      duration_ms: 4.407
+      type: 'suite'
+      ...
+    # Subtest: 5. Error Handling for Missing and Inactive Spawns
+        # Subtest: should return 404 NotFoundError when spawn does not exist
+        ok 1 - should return 404 NotFoundError when spawn does not exist
+          ---
+          duration_ms: 1.1605
+          type: 'test'
+          ...
+        # Subtest: should return controlled domain error when attempting to claim an expired spawn
+        ok 2 - should return controlled domain error when attempting to claim an expired spawn
+          ---
+          duration_ms: 1.1087
+          type: 'test'
+          ...
+        1..2
+    ok 5 - 5. Error Handling for Missing and Inactive Spawns
+      ---
+      duration_ms: 2.5296
+      type: 'suite'
+      ...
+    1..5
+ok 36 - POST /api/v1/claims Endpoint and Duplicate Protection
+  ---
+  duration_ms: 22.8544
+  type: 'suite'
+  ...
+# [PostgreSQL Database Error]: Error: Simulated failure during transaction
+#     at <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\transactionManager.test.ts:69:19)
+#     at async TransactionManager.runInTransaction (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\infrastructure\\database\\transaction.ts:29:22)
+#     at async <anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\transactionManager.test.ts:67:11)
+#     at async waitForActual (node:assert:566:5)
+#     at async Function.rejects (node:assert:687:25)
+#     at async TestContext.<anonymous> (C:\\Users\\ASUS\\OneDrive\\Desktop\\campusrun-i9\\server\\tests\\transactionManager.test.ts:65:7)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: TransactionManager Transaction Behavior
+    # Subtest: should execute BEGIN, work queries, and COMMIT on successful transaction
+    ok 1 - should execute BEGIN, work queries, and COMMIT on successful transaction
+      ---
+      duration_ms: 2.327
+      type: 'test'
+      ...
+    # Subtest: should execute ROLLBACK and release client when an error occurs
+    ok 2 - should execute ROLLBACK and release client when an error occurs
+      ---
+      duration_ms: 4.5071
+      type: 'test'
+      ...
+    1..2
+ok 37 - TransactionManager Transaction Behavior
+  ---
+  duration_ms: 8.9153
+  type: 'suite'
+  ...
+# Subtest: VAPID Credential Generation & PostgresPushSubscriptionRepository
+    # Subtest: 1. VAPID Generation Utility
+        # Subtest: should generate valid VAPID public and private key pair
+        ok 1 - should generate valid VAPID public and private key pair
+          ---
+          duration_ms: 2.7708
+          type: 'test'
+          ...
+        # Subtest: should execute CLI runner cleanly and output keys
+        ok 2 - should execute CLI runner cleanly and output keys
+          ---
+          duration_ms: 0.7531
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. VAPID Generation Utility
+      ---
+      duration_ms: 6.6136
+      type: 'suite'
+      ...
+    # Subtest: 2. PostgresPushSubscriptionRepository
+        # Subtest: should construct and execute saveOrUpdate with correct query and parameters
+        ok 1 - should construct and execute saveOrUpdate with correct query and parameters
+          ---
+          duration_ms: 3.0044
+          type: 'test'
+          ...
+        # Subtest: should construct and execute findByEndpoint
+        ok 2 - should construct and execute findByEndpoint
+          ---
+          duration_ms: 0.6626
+          type: 'test'
+          ...
+        # Subtest: should return null when findByEndpoint or findById finds no row
+        ok 3 - should return null when findByEndpoint or findById finds no row
+          ---
+          duration_ms: 0.5367
+          type: 'test'
+          ...
+        # Subtest: should construct and execute findByUserId
+        ok 4 - should construct and execute findByUserId
+          ---
+          duration_ms: 0.6681
+          type: 'test'
+          ...
+        # Subtest: should construct and execute findAll
+        ok 5 - should construct and execute findAll
+          ---
+          duration_ms: 0.544
+          type: 'test'
+          ...
+        # Subtest: should execute deleteByEndpointAndUserId and deleteByIdAndUserId with user isolation
+        ok 6 - should execute deleteByEndpointAndUserId and deleteByIdAndUserId with user isolation
+          ---
+          duration_ms: 2.1791
+          type: 'test'
+          ...
+        1..6
+    ok 2 - 2. PostgresPushSubscriptionRepository
+      ---
+      duration_ms: 8.6933
+      type: 'suite'
+      ...
+    1..2
+ok 38 - VAPID Credential Generation & PostgresPushSubscriptionRepository
+  ---
+  duration_ms: 16.5491
+  type: 'suite'
+  ...
+# Γùç injected env (24) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+# [PushDeliveryService] Error dispatching push to https://fcm.googleapis.com/fcm/send/p1-phone: Push service 500 error
+# [PushDeliveryService] Error dispatching push to https://updates.push.services.mozilla.com/wpush/v2/p1-laptop: Push service 500 error
+# Subtest: Web Push Notification Handlers Wired to Internal Event Bus
+    # Subtest: 1. Spawn Notification Handler (Rotation & Expiry)
+        # Subtest: should dispatch spawn rotation push notification to eligible subscribed users
+        ok 1 - should dispatch spawn rotation push notification to eligible subscribed users
+          ---
+          duration_ms: 7.3337
+          type: 'test'
+          ...
+        # Subtest: should dispatch spawn expiry push notification on SpawnExpiredEvent
+        ok 2 - should dispatch spawn expiry push notification on SpawnExpiredEvent
+          ---
+          duration_ms: 1.1686
+          type: 'test'
+          ...
+        1..2
+    ok 1 - 1. Spawn Notification Handler (Rotation & Expiry)
+      ---
+      duration_ms: 10.1784
+      type: 'suite'
+      ...
+    # Subtest: 2. Claim Notification Handler
+        # Subtest: should dispatch claim confirmation push notification strictly to claiming user
+        ok 1 - should dispatch claim confirmation push notification strictly to claiming user
+          ---
+          duration_ms: 3.2423
+          type: 'test'
+          ...
+        # Subtest: should respect user preferences and skip claim push when disabled by user
+        ok 2 - should respect user preferences and skip claim push when disabled by user
+          ---
+          duration_ms: 1.2296
+          type: 'test'
+          ...
+        1..2
+    ok 2 - 2. Claim Notification Handler
+      ---
+      duration_ms: 5.0317
+      type: 'suite'
+      ...
+    # Subtest: 3. Rank-Change Notification Handler
+        # Subtest: should dispatch rank update push notification to the affected player
+        ok 1 - should dispatch rank update push notification to the affected player
+          ---
+          duration_ms: 3.3547
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. Rank-Change Notification Handler
+      ---
+      duration_ms: 3.6861
+      type: 'suite'
+      ...
+    # Subtest: 4. Reset Notification Handler (Approaching & Weekly Reset)
+        # Subtest: should dispatch reset approaching push notification
+        ok 1 - should dispatch reset approaching push notification
+          ---
+          duration_ms: 2.1655
+          type: 'test'
+          ...
+        # Subtest: should dispatch weekly reset announcement push notification on LeaderboardResetEvent
+        ok 2 - should dispatch weekly reset announcement push notification on LeaderboardResetEvent
+          ---
+          duration_ms: 1.0291
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. Reset Notification Handler (Approaching & Weekly Reset)
+      ---
+      duration_ms: 4.9984
+      type: 'suite'
+      ...
+    # Subtest: 5. Fault Tolerance & Unsubscribe
+        # Subtest: should not throw or disrupt event bus if PushDeliveryService encounters transport failure
+        ok 1 - should not throw or disrupt event bus if PushDeliveryService encounters transport failure
+          ---
+          duration_ms: 3.5534
+          type: 'test'
+          ...
+        1..1
+    ok 5 - 5. Fault Tolerance & Unsubscribe
+      ---
+      duration_ms: 3.7748
+      type: 'suite'
+      ...
+    1..5
+ok 39 - Web Push Notification Handlers Wired to Internal Event Bus
+  ---
+  duration_ms: 30.0808
+  type: 'suite'
+  ...
+# Subtest: Weekly Cycle Data Model and Migration
+    # Subtest: should have the migration SQL file present and readable
+    ok 1 - should have the migration SQL file present and readable
+      ---
+      duration_ms: 2.16
+      type: 'test'
+      ...
+    # Subtest: weekly_cycles table definition
+        # Subtest: should define weekly_cycles table with required fields and types
+        ok 1 - should define weekly_cycles table with required fields and types
+          ---
+          duration_ms: 0.6791
+          type: 'test'
+          ...
+        # Subtest: should enforce single active cycle via partial unique index
+        ok 2 - should enforce single active cycle via partial unique index
+          ---
+          duration_ms: 0.4952
+          type: 'test'
+          ...
+        1..2
+    ok 2 - weekly_cycles table definition
+      ---
+      duration_ms: 1.6999
+      type: 'suite'
+      ...
+    # Subtest: weekly_cycle_settings table definition
+        # Subtest: should define single-row weekly_cycle_settings table
+        ok 1 - should define single-row weekly_cycle_settings table
+          ---
+          duration_ms: 0.6416
+          type: 'test'
+          ...
+        # Subtest: should seed default settings (Sunday, 23:59:00 UTC) with ON CONFLICT DO NOTHING
+        ok 2 - should seed default settings (Sunday, 23:59:00 UTC) with ON CONFLICT DO NOTHING
+          ---
+          duration_ms: 0.4595
+          type: 'test'
+          ...
+        1..2
+    ok 3 - weekly_cycle_settings table definition
+      ---
+      duration_ms: 1.5344
+      type: 'suite'
+      ...
+    # Subtest: weekly_reset_events table definition
+        # Subtest: should define weekly_reset_events table with unique reset_key and foreign key
+        ok 1 - should define weekly_reset_events table with unique reset_key and foreign key
+          ---
+          duration_ms: 0.6424
+          type: 'test'
+          ...
+        1..1
+    ok 4 - weekly_reset_events table definition
+      ---
+      duration_ms: 1.4924
+      type: 'suite'
+      ...
+    # Subtest: Domain Entities
+        # Subtest: should instantiate WeeklyCycle entity correctly
+        ok 1 - should instantiate WeeklyCycle entity correctly
+          ---
+          duration_ms: 0.6572
+          type: 'test'
+          ...
+        # Subtest: should instantiate WeeklyCycleSettings entity and validate weekday
+        ok 2 - should instantiate WeeklyCycleSettings entity and validate weekday
+          ---
+          duration_ms: 1.0385
+          type: 'test'
+          ...
+        # Subtest: should instantiate WeeklyResetEvent entity correctly
+        ok 3 - should instantiate WeeklyResetEvent entity correctly
+          ---
+          duration_ms: 0.5102
+          type: 'test'
+          ...
+        # Subtest: should demonstrate single active cycle and idempotent reset key enforcement
+        ok 4 - should demonstrate single active cycle and idempotent reset key enforcement
+          ---
+          duration_ms: 0.604
+          type: 'test'
+          ...
+        1..4
+    ok 5 - Domain Entities
+      ---
+      duration_ms: 3.4058
+      type: 'suite'
+      ...
+    1..5
+ok 40 - Weekly Cycle Data Model and Migration
+  ---
+  duration_ms: 12.9087
+  type: 'suite'
+  ...
+# Subtest: Weekly Cycle Service and Next-Reset Logic
+    # Subtest: 1. calculateNextResetTimestamp UTC Calculations
+        # Subtest: should return the same Sunday 23:59:00 UTC if fromDate is earlier on Sunday
+        ok 1 - should return the same Sunday 23:59:00 UTC if fromDate is earlier on Sunday
+          ---
+          duration_ms: 4.925
+          type: 'test'
+          ...
+        # Subtest: should return next Sunday 23:59:00 UTC if fromDate is after 23:59:00 on Sunday
+        ok 2 - should return next Sunday 23:59:00 UTC if fromDate is after 23:59:00 on Sunday
+          ---
+          duration_ms: 0.5438
+          type: 'test'
+          ...
+        # Subtest: should return next Sunday 23:59:00 UTC if fromDate is Monday
+        ok 3 - should return next Sunday 23:59:00 UTC if fromDate is Monday
+          ---
+          duration_ms: 0.6164
+          type: 'test'
+          ...
+        # Subtest: should handle custom reset weekday and time (e.g. Wednesday 18:00:00 UTC)
+        ok 4 - should handle custom reset weekday and time (e.g. Wednesday 18:00:00 UTC)
+          ---
+          duration_ms: 0.7426
+          type: 'test'
+          ...
+        # Subtest: should handle month and year rollovers deterministically
+        ok 5 - should handle month and year rollovers deterministically
+          ---
+          duration_ms: 0.9469
+          type: 'test'
+          ...
+        1..5
+    ok 1 - 1. calculateNextResetTimestamp UTC Calculations
+      ---
+      duration_ms: 10.2291
+      type: 'suite'
+      ...
+    # Subtest: 2. WeeklyCycleService & Use Case Logic
+        # Subtest: should return existing active cycle if already present
+        ok 1 - should return existing active cycle if already present
+          ---
+          duration_ms: 0.9386
+          type: 'test'
+          ...
+        # Subtest: should automatically initialize a new active cycle if none exists without mutating scores
+        ok 2 - should automatically initialize a new active cycle if none exists without mutating scores
+          ---
+          duration_ms: 1.1332
+          type: 'test'
+          ...
+        # Subtest: should expose the next reset timestamp via getNextResetTimestamp
+        ok 3 - should expose the next reset timestamp via getNextResetTimestamp
+          ---
+          duration_ms: 3.1395
+          type: 'test'
+          ...
+        # Subtest: should execute GetNextWeeklyResetUseCase cleanly
+        ok 4 - should execute GetNextWeeklyResetUseCase cleanly
+          ---
+          duration_ms: 1.6446
+          type: 'test'
+          ...
+        1..4
+    ok 2 - 2. WeeklyCycleService & Use Case Logic
+      ---
+      duration_ms: 7.7822
+      type: 'suite'
+      ...
+    # Subtest: 3. Controller & Endpoint Response
+        # Subtest: should return next reset timestamp with 200 OK and valid JSON format
+        ok 1 - should return next reset timestamp with 200 OK and valid JSON format
+          ---
+          duration_ms: 1.1434
+          type: 'test'
+          ...
+        # Subtest: should verify player scores are strictly preserved when next-reset is read
+        ok 2 - should verify player scores are strictly preserved when next-reset is read
+          ---
+          duration_ms: 0.8247
+          type: 'test'
+          ...
+        1..2
+    ok 3 - 3. Controller & Endpoint Response
+      ---
+      duration_ms: 2.2379
+      type: 'suite'
+      ...
+    # Subtest: 4. PostgresWeeklyCycleRepository SQL Queries
+        # Subtest: should query active weekly cycle from database
+        ok 1 - should query active weekly cycle from database
+          ---
+          duration_ms: 0.9795
+          type: 'test'
+          ...
+        # Subtest: should query weekly cycle settings from database
+        ok 2 - should query weekly cycle settings from database
+          ---
+          duration_ms: 0.6555
+          type: 'test'
+          ...
+        1..2
+    ok 4 - 4. PostgresWeeklyCycleRepository SQL Queries
+      ---
+      duration_ms: 1.9457
+      type: 'suite'
+      ...
+    1..4
+ok 41 - Weekly Cycle Service and Next-Reset Logic
+  ---
+  duration_ms: 23.8939
+  type: 'suite'
+  ...
+# Subtest: Weekly Leaderboard Query & Use Case
+    # Subtest: 1. should order weekly leaderboard by season_points DESC and break ties by profile_id ASC
+    ok 1 - 1. should order weekly leaderboard by season_points DESC and break ties by profile_id ASC
+      ---
+      duration_ms: 24.8878
+      type: 'test'
+      ...
+    # Subtest: 2. should support pagination with limit and offset while preserving global rank calculation
+    ok 2 - 2. should support pagination with limit and offset while preserving global rank calculation
+      ---
+      duration_ms: 0.7039
+      type: 'test'
+      ...
+    # Subtest: 3. should return required fields in controller response (profile_id, points, rank, username, displayName)
+    ok 3 - 3. should return required fields in controller response (profile_id, points, rank, username, displayName)
+      ---
+      duration_ms: 0.8973
+      type: 'test'
+      ...
+    1..3
+ok 42 - Weekly Leaderboard Query & Use Case
+  ---
+  duration_ms: 28.6338
+  type: 'suite'
+  ...
+# Subtest: PostgresLeaderboardRepository Weekly Query Construction
+    # Subtest: should construct SQL query with ROW_NUMBER() OVER (ORDER BY season_points DESC, profile_id ASC), LIMIT, and OFFSET
+    ok 1 - should construct SQL query with ROW_NUMBER() OVER (ORDER BY season_points DESC, profile_id ASC), LIMIT, and OFFSET
+      ---
+      duration_ms: 1.0261
+      type: 'test'
+      ...
+    1..1
+ok 43 - PostgresLeaderboardRepository Weekly Query Construction
+  ---
+  duration_ms: 1.5146
+  type: 'suite'
+  ...
+# Subtest: WeeklyResetScheduler Trigger & Automation
+    # Subtest: 1. Due-Time Validation
+        # Subtest: should NOT execute reset when current time is strictly before ends_at
+        ok 1 - should NOT execute reset when current time is strictly before ends_at
+          ---
+          duration_ms: 4.977
+          type: 'test'
+          ...
+        # Subtest: should execute reset when current time is equal to ends_at
+        ok 2 - should execute reset when current time is equal to ends_at
+          ---
+          duration_ms: 2.8518
+          type: 'test'
+          ...
+        # Subtest: should execute reset when current time has passed ends_at (catch-up / overdue)
+        ok 3 - should execute reset when current time has passed ends_at (catch-up / overdue)
+          ---
+          duration_ms: 1.3172
+          type: 'test'
+          ...
+        1..3
+    ok 1 - 1. Due-Time Validation
+      ---
+      duration_ms: 12.306
+      type: 'suite'
+      ...
+    # Subtest: 2. Deterministic Reset Key & Duplicate Protection
+        # Subtest: should use deterministic reset key `scheduled:<weekly_cycle_id>` and prevent double execution
+        ok 1 - should use deterministic reset key `scheduled:<weekly_cycle_id>` and prevent double execution
+          ---
+          duration_ms: 1.2862
+          type: 'test'
+          ...
+        1..1
+    ok 2 - 2. Deterministic Reset Key & Duplicate Protection
+      ---
+      duration_ms: 1.5168
+      type: 'suite'
+      ...
+    # Subtest: 3. Timer Lifecycle
+        # Subtest: should start and stop timer cleanly
+        ok 1 - should start and stop timer cleanly
+          ---
+          duration_ms: 0.8895
+          type: 'test'
+          ...
+        1..1
+    ok 3 - 3. Timer Lifecycle
+      ---
+      duration_ms: 1.1658
+      type: 'suite'
+      ...
+    1..3
+ok 44 - WeeklyResetScheduler Trigger & Automation
+  ---
+  duration_ms: 16.2986
+  type: 'suite'
+  ...
+1..44
+# tests 297
+# suites 142
+# pass 297
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5866.5198

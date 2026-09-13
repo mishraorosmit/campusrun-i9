@@ -6,6 +6,9 @@ import { SpawnFilterSchema } from '../../validation/schemas';
 export function createSpawnsRouter(spawnController: SpawnController): Router {
   const router = Router();
 
+  // GET /api/v1/spawns/active
+  router.get('/active', validateRequest(SpawnFilterSchema, 'query'), spawnController.getActiveSpawns);
+
   // GET /api/v1/spawns
   router.get('/', validateRequest(SpawnFilterSchema, 'query'), spawnController.getActiveSpawns);
 

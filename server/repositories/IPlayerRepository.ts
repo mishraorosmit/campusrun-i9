@@ -9,4 +9,7 @@ export interface IPlayerRepository {
   updatePoints(id: string, additionalPoints: number): Promise<void>;
   updatePointsTx(id: string, additionalPoints: number, tx: ITransactionContext): Promise<void>;
   incrementStreak(id: string): Promise<void>;
+  updatePreferences?(id: string, preferences: Record<string, string | number | boolean | null>): Promise<Record<string, string | number | boolean | null>>;
+  findAllUserIds?(): Promise<string[]>;
+  findAll?(): Promise<Player[]>;
 }

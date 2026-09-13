@@ -9,18 +9,18 @@ export const ClaimSubmissionSchema: ValidationSchema = {
     },
     {
       field: 'playerId',
-      validate: (val) => SchemaValidator.isNonEmptyString(val),
-      message: 'playerId is required and must be a non-empty string',
+      validate: (val) => val === undefined || SchemaValidator.isNonEmptyString(val),
+      message: 'playerId must be a non-empty string if provided',
     },
     {
       field: 'lat',
-      validate: (val) => SchemaValidator.isLatitude(val),
-      message: 'lat is required and must be a valid latitude between -90 and 90',
+      validate: (val) => val === undefined || SchemaValidator.isLatitude(val),
+      message: 'lat must be a valid latitude between -90 and 90',
     },
     {
       field: 'lng',
-      validate: (val) => SchemaValidator.isLongitude(val),
-      message: 'lng is required and must be a valid longitude between -180 and 180',
+      validate: (val) => val === undefined || SchemaValidator.isLongitude(val),
+      message: 'lng must be a valid longitude between -180 and 180',
     },
   ],
 };
@@ -59,3 +59,38 @@ export const AdminToggleSpawnSchema: ValidationSchema = {
     },
   ],
 };
+
+export const PushSubscriptionSchema: ValidationSchema = {
+  rules: [
+    {
+      field: 'endpoint',
+      validate: (val) => SchemaValidator.isValidUrl(val),
+      message: 'endpoint is required and must be a valid HTTP or HTTPS URL',
+    },
+    {
+      field: 'keys',
+      validate: (val, data) => {
+        const p256dh =
+          val && typeof val === 'object' && 'p256dh' in (val as object)
+            ? (val as any).p256dh
+            : data?.p256dh;
+        return SchemaValidator.isNonEmptyString(p256dh);
+      },
+      message: 'keys.p256dh (or p256dh) is required and must be a non-empty string',
+    },
+    {
+      field: 'auth',
+      validate: (val, data) => {
+        const auth =
+          data?.keys && typeof data.keys === 'object' && 'auth' in (data.keys as object)
+            ? (data.keys as any).auth
+            : val !== undefined
+            ? val
+            : data?.auth;
+        return SchemaValidator.isNonEmptyString(auth);
+      },
+      message: 'keys.auth (or auth) is required and must be a non-empty string',
+    },
+  ],
+};
+

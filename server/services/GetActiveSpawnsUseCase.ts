@@ -16,6 +16,8 @@ export class GetActiveSpawnsUseCase {
         id: s.id,
         code: s.code,
         title: s.props.title,
+        description: s.props.description || undefined,
+        clue: s.props.clue || undefined,
         tier: s.props.tier,
         status: s.status,
         points: s.points,

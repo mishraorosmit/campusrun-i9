@@ -14,6 +14,7 @@ export interface PlayerProps {
   claimsCount: number;
   currentStreakDays: number;
   campusZone?: string;
+  preferences?: Record<string, string | number | boolean | null>;
   role: PlayerRole;
   createdAt: Date;
   lastActiveAt: Date;
@@ -38,8 +39,20 @@ export class Player {
     return this.props.totalPoints;
   }
 
+  get seasonPoints(): number {
+    return this.props.seasonPoints;
+  }
+
+  get claimsCount(): number {
+    return this.props.claimsCount;
+  }
+
   get currentStreakDays(): number {
     return this.props.currentStreakDays;
+  }
+
+  get preferences(): Record<string, string | number | boolean | null> {
+    return this.props.preferences || {};
   }
 
   get isActive(): boolean {

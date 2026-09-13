@@ -18,6 +18,23 @@ declare global {
   }
 }
 
+export { JwtUtils };
+export type { JwtPayload };
+
+/**
+ * Programmatically verifies a JWT token string and extracts the user identity payload.
+ * Useful for WebSocket handshakes (Socket.IO auth), background workers, and Express middleware.
+ */
+export function verifyToken(token: string, jwtSecret: string = config.JWT_SECRET): AuthenticatedUser {
+  const payload: JwtPayload = JwtUtils.verify(token, jwtSecret);
+  return {
+    id: payload.sub,
+    email: payload.email,
+    username: payload.username,
+    role: payload.role as any,
+  };
+}
+
 /**
  * Creates authentication middleware with configured JWT secret.
  * Enforces valid Bearer JWT on protected endpoints.
@@ -69,6 +86,8 @@ export const requireAuthenticatedUser = (req: Request, res: Response, next: Next
   }
   return createAuthMiddleware(config.JWT_SECRET)(req, res, next);
 };
+
+export const requireCurrentUser = requireAuthenticatedUser;
 
 /**
  * Optional authentication middleware: parses JWT if present, but does not block if missing.

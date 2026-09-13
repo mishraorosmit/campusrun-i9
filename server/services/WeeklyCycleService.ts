@@ -1,6 +1,9 @@
 import { IWeeklyCycleRepository } from '../repositories/IWeeklyCycleRepository';
 import { ILeaderboardRepository } from '../repositories/ILeaderboardRepository';
 import { ITransactionManager, ITransactionContext, IQueryResult } from '../repositories/ITransactionManager';
+import { IRealtimeService } from './IRealtimeService';
+import { IEventBus } from '../events/IEventBus';
+import { LeaderboardResetEvent, ResetApproachingEvent } from '../domain/events';
 import { WeeklyCycle, WeeklyCycleSettings } from '../domain/entities';
 import { ResetType } from '../domain/types';
 
@@ -75,7 +78,9 @@ export class WeeklyCycleService {
   constructor(
     private readonly weeklyCycleRepo: IWeeklyCycleRepository,
     private readonly leaderboardRepo?: ILeaderboardRepository,
-    txManager?: ITransactionManager
+    txManager?: ITransactionManager,
+    private readonly realtimeService?: IRealtimeService,
+    private readonly eventBus?: IEventBus
   ) {
     this.txManager = txManager || {
       runInTransaction: async <T>(work: (tx: ITransactionContext) => Promise<T>): Promise<T> => {
@@ -132,6 +137,23 @@ export class WeeklyCycleService {
   public async getNextResetTimestamp(currentDate: Date = new Date()): Promise<NextResetDTO> {
     const cycle = await this.getActiveCycle(currentDate);
 
+    // Emit ResetApproachingEvent if approaching reset (e.g. within 60 minutes) without blocking
+    const minutesRemaining = Math.max(0, Math.round((cycle.endsAt.getTime() - currentDate.getTime()) / 60000));
+    if (this.eventBus && minutesRemaining > 0 && minutesRemaining <= 60) {
+      try {
+        await this.eventBus.publish(
+          new ResetApproachingEvent({
+            cycleId: cycle.id,
+            endsAt: cycle.endsAt,
+            minutesRemaining,
+            timestamp: currentDate,
+          })
+        );
+      } catch (err) {
+        console.error('[WeeklyCycleService] Error publishing ResetApproachingEvent:', err);
+      }
+    }
+
     return {
       nextResetAt: cycle.endsAt.toISOString(),
       cycleId: cycle.id,
@@ -147,7 +169,7 @@ export class WeeklyCycleService {
   public async resetWeeklyCycle(input: ResetWeeklyCycleInputDTO): Promise<ResetWeeklyCycleResultDTO> {
     const { resetKey, resetType, triggeredByProfileId } = input;
 
-    return this.txManager.runInTransaction(async (tx) => {
+    const result = await this.txManager.runInTransaction(async (tx) => {
       // 1. Idempotency Check: check if this reset key has already been recorded
       const existingEvent = await this.weeklyCycleRepo.getResetEventByKey(resetKey, tx);
       if (existingEvent) {
@@ -244,5 +266,34 @@ export class WeeklyCycleService {
         message: `Weekly cycle completed and scores reset. Next cycle ${nextActiveCycle.id} active.`,
       };
     });
+
+    // Publish LeaderboardResetEvent (Strictly after database commit, wrapped in try/catch)
+    if (this.eventBus && result.success && !result.duplicate) {
+      try {
+        await this.eventBus.publish(
+          new LeaderboardResetEvent({
+            cycleId: result.cycleId,
+            resetKey: result.resetKey,
+            resetTimestamp: new Date(result.executedAt),
+            period: 'weekly',
+          })
+        );
+      } catch (err) {
+        console.error('[WeeklyCycleService] Error publishing LeaderboardResetEvent:', err);
+      }
+    }
+
+    // Realtime broadcast to campus_global (Strictly after database commit)
+    if (this.realtimeService && result.success && !result.duplicate) {
+      this.realtimeService.broadcastLeaderboardWeeklyReset({
+        cycleId: result.cycleId || '',
+        nextCycleId: result.nextCycleId,
+        resetKey: result.resetKey,
+        executedAt: result.executedAt,
+        nextResetAt: result.nextResetAt || '',
+      });
+    }
+
+    return result;
   }
 }

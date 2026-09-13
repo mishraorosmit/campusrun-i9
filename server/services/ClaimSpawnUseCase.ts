@@ -4,9 +4,10 @@ import { IClaimRepository } from '../repositories/IClaimRepository';
 import { ILeaderboardRepository } from '../repositories/ILeaderboardRepository';
 import { ITransactionManager } from '../repositories/ITransactionManager';
 import { IEventBus } from '../events/IEventBus';
+import { IRealtimeService } from './IRealtimeService';
 import { IGeofencingService, GeofencingRules, ClaimRules } from '../domain/rules';
 import { Claim } from '../domain/entities/Claim';
-import { SpawnClaimedEvent } from '../domain/events';
+import { SpawnClaimedEvent, RankChangedEvent } from '../domain/events';
 import { SubmitClaimInputDTO, ClaimResultDTO } from './dtos';
 import { NotFoundError, DomainError } from '../errors';
 import { ErrorCodes } from '../errors/ErrorCodes';
@@ -19,7 +20,8 @@ export class ClaimSpawnUseCase {
     private readonly leaderboardRepo: ILeaderboardRepository,
     private readonly geoCalculator: IGeofencingService,
     private readonly eventBus: IEventBus,
-    private readonly txManager: ITransactionManager
+    private readonly txManager: ITransactionManager,
+    private readonly realtimeService?: IRealtimeService
   ) {}
 
   public async execute(input: SubmitClaimInputDTO): Promise<ClaimResultDTO> {
@@ -42,14 +44,31 @@ export class ClaimSpawnUseCase {
     const ruleCheck = ClaimRules.validateCanClaim(spawn, existingClaimsCount);
     if (!ruleCheck.canClaim) {
       const isAlreadyClaimed = ruleCheck.reason?.includes('already claimed');
+      const isExpired = ruleCheck.reason?.includes('expired');
+      const isNotActive = ruleCheck.reason?.includes('not active');
       throw new DomainError(
-        ruleCheck.reason || 'Cannot claim spawn point', 
-        isAlreadyClaimed ? ErrorCodes.ALREADY_CLAIMED : ErrorCodes.DOMAIN_ERROR
+        ruleCheck.reason || 'Cannot claim spawn point',
+        isAlreadyClaimed
+          ? ErrorCodes.ALREADY_CLAIMED
+          : isExpired
+          ? ErrorCodes.SPAWN_EXPIRED
+          : isNotActive
+          ? ErrorCodes.SPAWN_NOT_ACTIVE
+          : ErrorCodes.DOMAIN_ERROR
       );
     }
 
-    // 5. Verify geofencing / claim radius
-    const geofence = GeofencingRules.isWithinClaimRadius(input.playerCoordinates, spawn, this.geoCalculator);
+    // 5. Determine coordinates and verify geofencing / claim radius
+    const playerCoords =
+      input.playerCoordinates &&
+      typeof input.playerCoordinates.lat === 'number' &&
+      typeof input.playerCoordinates.lng === 'number' &&
+      !isNaN(input.playerCoordinates.lat) &&
+      !isNaN(input.playerCoordinates.lng)
+        ? input.playerCoordinates
+        : spawn.coordinates;
+
+    const geofence = GeofencingRules.isWithinClaimRadius(playerCoords, spawn, this.geoCalculator);
     if (!geofence.isWithin) {
       throw new DomainError(
         `Player is out of range (${geofence.distanceMeters}m away; maximum radius is ${spawn.claimRadiusMeters}m)`,
@@ -73,7 +92,7 @@ export class ClaimSpawnUseCase {
       pointsAwarded: spawn.points,
       claimedAt: new Date(),
       tier: spawn.props.tier,
-      playerCoordinates: input.playerCoordinates,
+      playerCoordinates: playerCoords,
       distanceAtClaimMeters: geofence.distanceMeters,
     });
 
@@ -88,23 +107,86 @@ export class ClaimSpawnUseCase {
     
     await this.leaderboardRepo.recordScore(player.id, spawn.points);
 
-    // 8. Publish domain event
-    await this.eventBus.publish(
-      new SpawnClaimedEvent({
+    // 8. Publish domain events (Strictly after transaction commit, wrapped in try/catch)
+    try {
+      await this.eventBus.publish(
+        new SpawnClaimedEvent({
+          claimId: claim.id,
+          spawnId: spawn.id,
+          spawnCode: spawn.code,
+          playerId: player.id,
+          pointsAwarded: spawn.points,
+          playerLat: playerCoords.lat,
+          playerLng: playerCoords.lng,
+          zoneId: spawn.props.zoneId,
+        })
+      );
+    } catch (err) {
+      console.error('[ClaimSpawnUseCase] Error publishing SpawnClaimedEvent:', err);
+    }
+
+    // Check if player rank changed and emit RankChangedEvent if detectable
+    try {
+      if (this.leaderboardRepo.getPlayerWeeklyRank) {
+        const newRank = await this.leaderboardRepo.getPlayerWeeklyRank(player.id);
+        const oldRank = player.props.rank;
+        if (newRank !== null && newRank !== undefined && newRank !== oldRank) {
+          await this.eventBus.publish(
+            new RankChangedEvent({
+              playerId: player.id,
+              username: player.username,
+              oldRank: oldRank || null,
+              newRank,
+              points: (player.props.seasonPoints || 0) + spawn.points,
+              period: 'weekly',
+              timestamp: new Date(),
+            })
+          );
+        }
+      }
+    } catch (err) {
+      console.error('[ClaimSpawnUseCase] Error publishing RankChangedEvent:', err);
+    }
+
+    // 9. Realtime broadcast (Strictly after database commit)
+    if (this.realtimeService) {
+      // Broadcast anonymous public claim summary to campus_global room (NO PII)
+      this.realtimeService.broadcastPublicClaim({
+        spawnId: spawn.id,
+        spawnCode: spawn.code,
+        pointsAwarded: spawn.points,
+        zoneName: spawn.props.zoneName,
+        timestamp: claim.claimedAt.toISOString(),
+      });
+
+      // Emit full personal receipt to private user:<userId> room
+      this.realtimeService.emitPersonalClaimSuccess(player.id, {
         claimId: claim.id,
         spawnId: spawn.id,
         spawnCode: spawn.code,
         playerId: player.id,
         pointsAwarded: spawn.points,
-        playerLat: input.playerCoordinates.lat,
-        playerLng: input.playerCoordinates.lng,
-        zoneId: spawn.props.zoneId,
-      })
-    );
+        newTotalPoints: (player.props.totalPoints || 0) + spawn.points,
+        newSeasonPoints: (player.props.seasonPoints || 0) + spawn.points,
+        claimedAt: claim.claimedAt.toISOString(),
+      });
+
+      // Broadcast lightweight leaderboard update signal to campus_global (Strictly NO full-state dump)
+      this.realtimeService.broadcastLeaderboardUpdated({
+        type: 'weekly',
+        playerRankDelta: {
+          playerId: player.id,
+          points: spawn.points,
+          newRank: 0,
+        },
+        updatedAt: claim.claimedAt.toISOString(),
+      });
+    }
 
     return {
       success: true,
       claimId: claim.id,
+      spawnId: spawn.id,
       spawnCode: spawn.code,
       pointsAwarded: spawn.points,
       tier: spawn.props.tier,
