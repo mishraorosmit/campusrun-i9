@@ -50,6 +50,8 @@ export default function App() {
   const {
     lat: playerLat,
     lng: playerLng,
+    accuracy: playerAccuracy,
+    heading: playerHeading,
     isSimulated: isSimulatingGps,
     toggleSimulation,
     setSimulatedPosition,
@@ -180,6 +182,7 @@ export default function App() {
             notifications={notifications}
             onMarkNotificationAsRead={handleMarkNotificationAsRead}
             onSwitchToAdmin={() => setCurrentMode('admin')}
+            onToggleTracking={() => toggleSimulation(!isSimulatingGps)}
           >
             {/* Screen 03 / 04 / 04a / 05: Map & Point Detail Flow */}
             {activePlayerTab === 'map' && (
@@ -189,6 +192,8 @@ export default function App() {
                 player={player}
                 playerLat={playerLat}
                 playerLng={playerLng}
+                playerAccuracy={playerAccuracy}
+                playerHeading={playerHeading}
                 onClaimSpawn={handleClaimSpawn}
                 isSimulatingGps={isSimulatingGps}
                 onToggleSimulatedGps={() => toggleSimulation(!isSimulatingGps)}

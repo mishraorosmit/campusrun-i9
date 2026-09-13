@@ -63,20 +63,20 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className={cn(
-              'relative z-10 w-full bg-[#FAF4EB] text-[#1A1310] rounded-t-2xl border-t border-[#EADBC8] shadow-2xl flex flex-col overflow-hidden pointer-events-auto',
+              'relative z-10 w-full bg-[#F4EFE6] text-[#1A1310] rounded-t-lg border-t-[3px] border-[#1A1310] shadow-2xl flex flex-col overflow-hidden pointer-events-auto',
               maxHeight
             )}
           >
             {/* Grab Handle */}
             {showHandle && (
               <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
-                <div className="w-10 h-1.5 bg-[#EADBC8] rounded-full" />
+                <div className="w-12 h-1 bg-[#1A1310]" />
               </div>
             )}
 
             {/* Header */}
             {(title || headerAction) && (
-              <div className="px-5 pt-2 pb-3 border-b border-[#EADBC8] flex items-center justify-between gap-3 shrink-0">
+              <div className="px-4 pt-2 pb-3 border-b-2 border-[#1A1310] flex items-center justify-between gap-3 shrink-0">
                 <div className="min-w-0 flex-1">
                   {title && (
                     <h3 className="text-base font-bold font-display tracking-tight text-[#1A1310] truncate">
@@ -95,7 +95,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="p-2 text-[#70625B] hover:text-[#1A1310] hover:bg-[#FBEEE1] rounded-lg transition-colors"
+                    className="p-2 text-[#70625B] border-2 border-[#1A1310] hover:text-[#1A1310] hover:bg-[#FDE8D7] transition-colors"
                     aria-label="Close sheet"
                   >
                     <X className="w-4 h-4" />
@@ -105,7 +105,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             )}
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-5 overscroll-contain">
+            <div className="flex-1 overflow-y-auto p-4 overscroll-contain">
               {children}
             </div>
           </motion.div>

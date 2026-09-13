@@ -1,5 +1,5 @@
 import { CampusZone, SpawnPoint } from '../types';
-import { svgToGps } from '../lib/geo';
+import { legacySvgToGps as svgToGps } from '../lib/geo';
 
 /**
  * Standard Campus Map Vector Geometry
@@ -10,9 +10,9 @@ export const CAMPUS_BOUNDS = {
   minY: 0,
   maxX: 1572,
   maxY: 2927,
-  viewBox: '0 0 1572 2927',
-  width: 1572,
-  height: 2927,
+  viewBox: '0 0 1991 3704',
+  width: 1991,
+  height: 3704,
 };
 
 export const INITIAL_ZONES: CampusZone[] = [

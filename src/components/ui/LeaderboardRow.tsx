@@ -29,10 +29,10 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({
     <div
       onClick={() => onClick && onClick(entry)}
       className={cn(
-        'flex items-center justify-between p-3 rounded-xl transition-all select-none min-h-[56px]',
+        'flex items-center justify-between p-3 rounded-sm transition-all select-none min-h-[56px]',
         isSelf
-          ? 'bg-[#FBEEE1] border-2 border-[#F16321] shadow-sm'
-          : 'bg-[#FAF4EB] border border-[#EADBC8] hover:border-[#D5C4AE]',
+          ? 'bg-[#FDE8D7] border-2 border-[#1A1310] shadow-[3px_3px_0_#F16321]'
+          : 'bg-white border-2 border-[#1A1310] hover:bg-[#FDE8D7]',
         onClick && 'cursor-pointer active:scale-[0.99]',
         className
       )}
@@ -41,10 +41,10 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({
         {/* Rank Badge */}
         <div
           className={cn(
-            'w-7 h-7 rounded-lg flex items-center justify-center font-bold font-display text-xs shrink-0',
+            'w-7 h-7 flex items-center justify-center font-bold font-display text-xs shrink-0',
             isTop3
               ? rankColors[entry.rank as 1 | 2 | 3]
-              : 'bg-transparent text-[#70625B] font-semibold'
+              : 'bg-[#F4EFE6] text-[#70625B] font-semibold'
           )}
         >
           {entry.rank}
@@ -65,7 +65,7 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({
               {entry.username}
             </span>
             {isSelf && (
-              <span className="text-[10px] px-1.5 py-0.2 bg-[#F16321] text-[#FBF6EE] rounded font-display uppercase tracking-wider font-semibold">
+                <span className="text-[10px] px-1.5 py-0.2 bg-[#F16321] text-white font-display uppercase tracking-wider font-semibold">
                 You
               </span>
             )}

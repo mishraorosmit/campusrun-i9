@@ -12,8 +12,8 @@ export interface GeoLocationState {
 }
 
 // Campus Center reference default
-const DEFAULT_CAMPUS_LAT = 37.4275;
-const DEFAULT_CAMPUS_LNG = -122.1695;
+const DEFAULT_CAMPUS_LAT = 20.2485;
+const DEFAULT_CAMPUS_LNG = 85.8010;
 
 export function useGeoLocation(options?: { simulate?: boolean }) {
   const [state, setState] = useState<GeoLocationState>({

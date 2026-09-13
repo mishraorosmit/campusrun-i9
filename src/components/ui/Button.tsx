@@ -35,24 +35,24 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants = {
       primary:
-        'bg-[#F16321] text-[#FBF6EE] hover:bg-[#D44E11] active:bg-[#B33E09] shadow-sm font-semibold tracking-wide',
+        'bg-[#F16321] text-white hover:bg-[#D44E11] active:bg-[#B33E09] shadow-[3px_3px_0_#1A1310] font-semibold tracking-wide',
       secondary:
-        'bg-[#FBEEE1] text-[#1A1310] hover:bg-[#F3DEC9] border border-[#EADBC8] active:bg-[#EADBC8] font-medium',
+        'bg-[#FDE8D7] text-[#1A1310] hover:bg-[#F3DEC9] border-2 border-[#1A1310] active:bg-[#EADBC8] font-medium',
       dark:
-        'bg-[#1A1310] text-[#FBF6EE] hover:bg-[#2E231E] active:bg-[#3D2F28] font-medium',
+        'bg-[#1A1310] text-white hover:bg-[#2E231E] active:bg-[#3D2F28] shadow-[3px_3px_0_#F16321] font-medium',
       outline:
-        'bg-transparent border border-[#1A1310] text-[#1A1310] hover:bg-[#FBEEE1] active:bg-[#F3DEC9] font-medium',
+        'bg-white border-2 border-[#1A1310] text-[#1A1310] hover:bg-[#FDE8D7] active:bg-[#F3DEC9] font-medium',
       ghost:
-        'bg-transparent text-[#1A1310] hover:bg-[#FBEEE1] active:bg-[#F3DEC9]',
+        'bg-transparent text-[#1A1310] hover:bg-[#FDE8D7] active:bg-[#F3DEC9]',
       danger:
-        'bg-[#D32F2F] text-[#FBF6EE] hover:bg-[#B71C1C] active:bg-[#9A0007] font-semibold',
+        'bg-[#D32F2F] text-white hover:bg-[#B71C1C] active:bg-[#9A0007] shadow-[3px_3px_0_#1A1310] font-semibold',
     };
 
     const sizes = {
-      sm: 'h-9 px-3 text-xs rounded-lg gap-1.5',
-      md: 'h-11 px-5 text-sm rounded-xl gap-2 min-h-[44px]',
-      lg: 'h-13 px-6 text-base rounded-xl gap-2.5 min-h-[48px]',
-      icon: 'h-11 w-11 p-0 rounded-xl min-h-[44px] min-w-[44px]',
+      sm: 'h-9 px-3 text-xs gap-1.5 rounded-sm',
+      md: 'h-11 px-5 text-sm gap-2 min-h-[44px] rounded-sm',
+      lg: 'h-13 px-6 text-base gap-2.5 min-h-[48px] rounded-sm',
+      icon: 'h-11 w-11 p-0 min-h-[44px] min-w-[44px] rounded-sm',
     };
 
     return (

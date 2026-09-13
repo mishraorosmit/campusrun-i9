@@ -25,33 +25,33 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
   );
 
   return (
-    <div className="relative flex-1 w-full h-full bg-[#FBF6EE] flex flex-col overflow-hidden">
+    <div className="relative flex-1 w-full h-full bg-[#F4EFE6] flex flex-col overflow-hidden">
       {/* Top Header & Tab Filter */}
-      <div className="p-4 bg-[#FAF4EB]/95 backdrop-blur-md border-b border-[#EADBC8] shrink-0 flex flex-col gap-3">
+      <div className="p-3 sm:p-4 bg-white border-b-[3px] border-[#1A1310] shrink-0 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold font-display tracking-tight text-[#1A1310]">
               CAMPUS BOARD
             </h1>
-            <span className="text-xs text-[#70625B]">
-              Real-time proximity standings
+            <span className="text-[10px] sm:text-xs text-[#70625B] font-mono uppercase">
+              Real-time campus standings
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FBEEE1] border border-[#EADBC8] rounded-xl text-xs font-mono text-[#F16321]">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#FDE8D7] border-2 border-[#1A1310] text-[10px] font-mono text-[#F16321]">
             <Clock className="w-3.5 h-3.5" />
             <span>RESET 2D 14H</span>
           </div>
         </div>
 
         {/* Tab Switcher: This Week | All-time */}
-        <div className="grid grid-cols-2 p-1 bg-[#FBEEE1] border border-[#EADBC8] rounded-xl">
+        <div className="grid grid-cols-2 p-1 bg-[#F4EFE6] border-2 border-[#1A1310]">
           <button
             type="button"
             onClick={() => setPeriod('week')}
-            className={`py-2 text-xs font-bold font-display rounded-lg transition-all ${
+              className={`py-2 text-xs font-bold font-display transition-all ${
               period === 'week'
-                ? 'bg-[#F16321] text-[#FAF4EB] shadow-xs'
+                ? 'bg-[#1A1310] text-white'
                 : 'text-[#70625B] hover:text-[#1A1310]'
             }`}
           >
@@ -60,9 +60,9 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
           <button
             type="button"
             onClick={() => setPeriod('all-time')}
-            className={`py-2 text-xs font-bold font-display rounded-lg transition-all ${
+              className={`py-2 text-xs font-bold font-display transition-all ${
               period === 'all-time'
-                ? 'bg-[#F16321] text-[#FAF4EB] shadow-xs'
+                ? 'bg-[#1A1310] text-white'
                 : 'text-[#70625B] hover:text-[#1A1310]'
             }`}
           >
@@ -72,7 +72,7 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
       </div>
 
       {/* Scrollable Leaderboard List */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 pb-24">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-2 pb-24">
         {currentList.map((entry) => (
           <LeaderboardRow
             key={`${entry.playerId}-${entry.rank}`}
@@ -83,11 +83,11 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
 
       {/* Pinned Current Player Row at Bottom (Screen 06 Requirement) */}
       {currentPlayerEntry && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-[#FAF4EB]/95 backdrop-blur-md border-t-2 border-[#F16321] shadow-xl z-20">
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-white border-t-[3px] border-[#1A1310] shadow-[0_-4px_0_rgba(26,19,16,0.08)] z-20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Current Rank Badge */}
-              <div className="w-8 h-8 rounded-xl bg-[#F16321] text-[#FAF4EB] flex items-center justify-center font-bold font-display text-sm">
+              <div className="w-8 h-8 bg-[#F16321] text-white flex items-center justify-center font-bold font-display text-sm">
                 #{currentPlayerEntry.rank}
               </div>
 
@@ -96,7 +96,7 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
                   <span className="text-xs font-bold font-display text-[#1A1310]">
                     {currentPlayerEntry.username}
                   </span>
-                  <span className="text-[10px] bg-[#FBEEE1] text-[#F16321] border border-[#EADBC8] px-1.5 py-0.2 rounded font-bold font-mono">
+                  <span className="text-[10px] bg-[#FDE8D7] text-[#F16321] border border-[#1A1310] px-1.5 py-0.2 font-bold font-mono">
                     YOU
                   </span>
                 </div>

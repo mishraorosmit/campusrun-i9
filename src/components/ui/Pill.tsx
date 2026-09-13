@@ -38,9 +38,9 @@ export const Pill: React.FC<PillProps> = ({
   };
 
   const sizes = {
-    xs: 'px-2 py-0.5 text-[11px] gap-1 rounded-md h-5',
-    sm: 'px-2.5 py-1 text-xs gap-1.5 rounded-lg h-6',
-    md: 'px-3 py-1.5 text-sm gap-2 rounded-lg h-8',
+    xs: 'px-2 py-0.5 text-[11px] gap-1 h-5 rounded-sm',
+    sm: 'px-2.5 py-1 text-xs gap-1.5 h-6 rounded-sm',
+    md: 'px-3 py-1.5 text-sm gap-2 h-8 rounded-sm',
   };
 
   return (

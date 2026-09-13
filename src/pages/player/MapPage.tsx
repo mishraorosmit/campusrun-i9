@@ -28,6 +28,8 @@ export interface MapPageProps {
   player: PlayerProfile;
   playerLat: number;
   playerLng: number;
+  playerAccuracy?: number | null;
+  playerHeading?: number | null;
   onClaimSpawn: (spawnId: string) => Promise<ClaimResult | { success: boolean; message: string }>;
   isSimulatingGps?: boolean;
   onToggleSimulatedGps?: () => void;
@@ -41,6 +43,8 @@ export const MapPage: React.FC<MapPageProps> = ({
   player,
   playerLat,
   playerLng,
+  playerAccuracy,
+  playerHeading,
   onClaimSpawn,
   isSimulatingGps,
   onToggleSimulatedGps,
@@ -151,7 +155,7 @@ export const MapPage: React.FC<MapPageProps> = ({
     : null;
 
   return (
-    <div className="relative w-full h-full flex-1 bg-[#FBF6EE] overflow-hidden flex flex-col">
+    <div className="relative w-full h-full flex-1 bg-[#F4EFE6] overflow-hidden flex flex-col">
       {/* Screen 03c: Offline Banner */}
       {isOffline && (
         <div className="bg-[#5B7C99] text-[#FAF4EB] px-4 py-2 flex items-center justify-between text-xs font-medium z-30 shadow-xs">
@@ -179,15 +183,11 @@ export const MapPage: React.FC<MapPageProps> = ({
       )}
 
       {/* Top Map Action Header Overlay */}
-      <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
         {/* Active Spawns Pill */}
-        <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 bg-[#FAF4EB]/95 backdrop-blur-md border border-[#EADBC8] rounded-xl shadow-xs">
-          <div className="w-2 h-2 rounded-full bg-[#F16321] animate-ping" />
-          <span className="text-xs font-bold font-display text-[#1A1310]">
-            {activeSpawns.length} ACTIVE
-          </span>
-          <span className="text-[10px] text-[#70625B] font-mono pl-1 border-l border-[#EADBC8]">
-            CAMPUS I9
+        <div className="pointer-events-auto bg-white border-2 border-[#1A1310] px-3 py-1.5 shadow-[3px_3px_0_#1A1310]">
+          <span className="text-xs font-bold font-mono text-[#1A1310] uppercase">
+            {activeSpawns.length} active drops
           </span>
         </div>
 
@@ -197,10 +197,10 @@ export const MapPage: React.FC<MapPageProps> = ({
           <button
             onClick={() => setShowLegend(!showLegend)}
             title="Map Layers & Landmark Legend"
-            className={`p-2 rounded-xl border shadow-xs transition-colors flex items-center gap-1.5 ${
+              className={`p-2 bg-white border-2 border-[#1A1310] shadow-[3px_3px_0_#1A1310] transition-colors flex items-center gap-1.5 ${
               showLegend
-                ? 'bg-[#FBEEE1] text-[#F16321] border-[#F16321]'
-                : 'bg-[#FAF4EB] text-[#70625B] border-[#EADBC8] hover:text-[#1A1310]'
+                ? 'bg-[#F16321] text-white'
+              : 'text-[#1A1310] hover:text-[#F16321]'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -219,7 +219,7 @@ export const MapPage: React.FC<MapPageProps> = ({
             >
               <Locate className="w-3.5 h-3.5" />
               <span className="text-[10px] uppercase tracking-wider">
-                {isSimulatingGps ? 'SIM GPS' : 'REAL GPS'}
+                {isSimulatingGps ? 'START TRACKING' : 'TRACKING LIVE'}
               </span>
             </button>
           )}
@@ -233,6 +233,8 @@ export const MapPage: React.FC<MapPageProps> = ({
           zones={zones}
           playerLat={playerLat}
           playerLng={playerLng}
+          playerAccuracy={playerAccuracy}
+          playerHeading={playerHeading}
           selectedSpawnId={selectedSpawn?.id || null}
           onSelectSpawn={handleSelectSpawn}
           selectedLandmarkId={selectedLandmark?.id || null}
@@ -243,12 +245,12 @@ export const MapPage: React.FC<MapPageProps> = ({
         />
 
         {/* Floating Map Zoom & Recenter Controls (Right Edge) */}
-        <div className="absolute right-3 bottom-28 z-20 flex flex-col gap-2 pointer-events-auto">
+        <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-2 pointer-events-auto">
           {/* Recenter / Locate Button */}
           <button
             onClick={() => setZoomAction({ type: 'recenter' })}
             title="Recenter on my location"
-            className="w-11 h-11 bg-[#FAF4EB] text-[#1A1310] border border-[#EADBC8] rounded-xl shadow-md flex items-center justify-center hover:bg-[#FBEEE1] active:scale-95 transition-transform"
+            className="w-10 h-10 sm:w-11 sm:h-11 bg-white text-[#1A1310] border-2 border-[#1A1310] shadow-[3px_3px_0_#1A1310] flex items-center justify-center hover:bg-[#FDE8D7] active:translate-x-0.5 active:translate-y-0.5 transition-transform"
           >
             <Locate className="w-5 h-5 text-[#F16321]" />
           </button>
@@ -258,7 +260,7 @@ export const MapPage: React.FC<MapPageProps> = ({
             <button
               onClick={() => handleWalkCloser()}
               title="Simulate walking closer"
-              className="w-11 h-11 bg-[#FBEEE1] text-[#F16321] border border-[#EADBC8] rounded-xl shadow-md flex items-center justify-center hover:bg-[#F16321] hover:text-[#FAF4EB] active:scale-95 transition-colors"
+              className="w-10 h-10 sm:w-11 sm:h-11 bg-[#FBEEE1] text-[#F16321] border border-[#EADBC8] rounded-xl shadow-md flex items-center justify-center hover:bg-[#F16321] hover:text-[#FAF4EB] active:scale-95 transition-colors"
             >
               <Footprints className="w-5 h-5" />
             </button>
@@ -268,7 +270,7 @@ export const MapPage: React.FC<MapPageProps> = ({
           <button
             onClick={() => setZoomAction({ type: 'in' })}
             title="Zoom In"
-            className="w-11 h-11 bg-[#FAF4EB] text-[#1A1310] border border-[#EADBC8] rounded-xl shadow-md flex items-center justify-center hover:bg-[#FBEEE1] active:scale-95 transition-transform"
+            className="w-10 h-10 sm:w-11 sm:h-11 bg-white text-[#1A1310] border-2 border-[#1A1310] shadow-[3px_3px_0_#1A1310] flex items-center justify-center hover:bg-[#FDE8D7] active:translate-x-0.5 active:translate-y-0.5 transition-transform"
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -277,7 +279,7 @@ export const MapPage: React.FC<MapPageProps> = ({
           <button
             onClick={() => setZoomAction({ type: 'out' })}
             title="Zoom Out"
-            className="w-11 h-11 bg-[#FAF4EB] text-[#1A1310] border border-[#EADBC8] rounded-xl shadow-md flex items-center justify-center hover:bg-[#FBEEE1] active:scale-95 transition-transform"
+            className="w-10 h-10 sm:w-11 sm:h-11 bg-white text-[#1A1310] border-2 border-[#1A1310] shadow-[3px_3px_0_#1A1310] flex items-center justify-center hover:bg-[#FDE8D7] active:translate-x-0.5 active:translate-y-0.5 transition-transform"
           >
             <Minus className="w-5 h-5" />
           </button>
@@ -518,9 +520,9 @@ export const MapPage: React.FC<MapPageProps> = ({
 
       {/* Screen 03a: Location Denied Modal */}
       {showLocationDeniedModal && (
-        <div className="fixed inset-0 z-50 bg-[#1A1310]/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#FAF4EB] border border-[#EADBC8] rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#FBEEE1] border border-[#EADBC8] flex items-center justify-center text-[#F16321]">
+        <div className="fixed inset-0 z-50 bg-[#1A1310]/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-sm bg-[#F4EFE6] border-[3px] border-[#1A1310] p-5 sm:p-6 shadow-[5px_5px_0_#F16321] flex flex-col items-center text-center gap-4">
+            <div className="w-14 h-14 bg-[#FDE8D7] border-2 border-[#1A1310] flex items-center justify-center text-[#F16321]">
               <AlertTriangle className="w-7 h-7" />
             </div>
 

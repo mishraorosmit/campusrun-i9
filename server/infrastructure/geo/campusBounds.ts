@@ -26,28 +26,28 @@ export interface CampusControlPoint {
 
 export const AUTHORITATIVE_CAMPUS_BOUNDS = {
   srid: 4326,
-  northWest: { lat: 37.4330, lng: -122.1765 } as Coordinates,
-  northEast: { lat: 37.4330, lng: -122.1615 } as Coordinates,
-  southEast: { lat: 37.4215, lng: -122.1615 } as Coordinates,
-  southWest: { lat: 37.4215, lng: -122.1765 } as Coordinates,
-  center: { lat: 37.42725, lng: -122.1690 } as Coordinates,
-  latSpan: 0.0115, // 37.4330 - 37.4215
-  lngSpan: 0.0150, // -122.1615 - (-122.1765)
-  svgWidth: 1572,
-  svgHeight: 2927,
-  svgViewBox: '0 0 1572 2927',
+  northWest: { lat: 20.2520, lng: 85.7975 } as Coordinates,
+  northEast: { lat: 20.2520, lng: 85.8045 } as Coordinates,
+  southEast: { lat: 20.2435, lng: 85.8045 } as Coordinates,
+  southWest: { lat: 20.2435, lng: 85.7975 } as Coordinates,
+  center: { lat: 20.2485, lng: 85.8010 } as Coordinates,
+  latSpan: 0.0085,
+  lngSpan: 0.0070,
+  svgWidth: 1991,
+  svgHeight: 3704,
+  svgViewBox: '0 0 1991 3704',
   minX: 0,
   minY: 0,
-  maxX: 1572,
-  maxY: 2927,
+  maxX: 1991,
+  maxY: 3704,
 };
 
 /**
  * WGS 84 Closed Polygon WKT for PostGIS ST_GeogFromText / ST_GeomFromText
  * Notice: Longitude first, latitude second!
  */
-export const CAMPUS_BOUNDARY_POLYGON_WKT = 
-  'POLYGON((-122.1765 37.4330, -122.1615 37.4330, -122.1615 37.4215, -122.1765 37.4215, -122.1765 37.4330))';
+export const CAMPUS_BOUNDARY_POLYGON_WKT =
+  'POLYGON((85.7975 20.2520, 85.8045 20.2520, 85.8045 20.2435, 85.7975 20.2435, 85.7975 20.2520))';
 
 /**
  * 8 Verified Landmark Calibration & Control Points

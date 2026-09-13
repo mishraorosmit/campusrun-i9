@@ -50,17 +50,17 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#1A1310]/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
-      <div className="w-full max-w-sm h-full bg-[#FAF4EB] border-l border-[#EADBC8] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-0 z-50 bg-[#1A1310]/65 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+      <div className="w-full max-w-sm h-full bg-[#F4EFE6] border-l-[3px] border-[#1A1310] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="px-4 py-4 border-b border-[#EADBC8] flex items-center justify-between bg-[#FAF4EB]/95 backdrop-blur-md">
+        <div className="px-4 py-4 border-b-[3px] border-[#1A1310] flex items-center justify-between bg-white">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-[#F16321]" />
             <h2 className="text-base font-bold font-display text-[#1A1310] tracking-tight">
               NOTIFICATIONS
             </h2>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-[#F16321] text-[#FAF4EB] text-[10px] font-bold font-mono">
+              <span className="px-2 py-0.5 bg-[#F16321] text-white text-[10px] font-bold font-mono">
                 {unreadCount} NEW
               </span>
             )}
@@ -68,7 +68,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-[#FBEEE1] flex items-center justify-center text-[#70625B] hover:text-[#1A1310] transition-colors"
+            className="w-9 h-9 border-2 border-[#1A1310] hover:bg-[#FDE8D7] flex items-center justify-center text-[#70625B] hover:text-[#1A1310] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -91,11 +91,11 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
                 onClick={() => onMarkAsRead(notif.id)}
                 className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
                   notif.read
-                    ? 'bg-[#FAF4EB] border-[#EADBC8] opacity-80'
-                    : 'bg-[#FBEEE1] border-[#F16321]/30 shadow-xs'
+                    ? 'bg-white border-2 border-[#1A1310] opacity-80'
+                    : 'bg-[#FDE8D7] border-2 border-[#1A1310] shadow-[3px_3px_0_#F16321]'
                 }`}
               >
-                <div className="w-8 h-8 rounded-xl bg-[#FAF4EB] border border-[#EADBC8] flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-8 h-8 bg-white border-2 border-[#1A1310] flex items-center justify-center shrink-0 mt-0.5">
                   {getIcon(notif.type)}
                 </div>
 
@@ -118,7 +118,7 @@ export const NotificationsDrawer: React.FC<NotificationsDrawerProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-[#EADBC8] bg-[#FAF4EB] flex items-center justify-between">
+        <div className="p-3 border-t-[3px] border-[#1A1310] bg-white flex items-center justify-between">
           <span className="text-[11px] text-[#70625B] font-mono">
             Verified campus alerts
           </span>
