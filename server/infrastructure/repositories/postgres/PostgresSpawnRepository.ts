@@ -1,381 +1,116 @@
-import { ISpawnRepository, SpawnFilterOptions, ActiveSpawnFilterOptions } from '../../../repositories/ISpawnRepository';
+import { ISpawnRepository } from '../../../repositories/ISpawnRepository';
 import { SpawnPoint, SpawnPointProps } from '../../../domain/entities/SpawnPoint';
-import { BoundingBox, Coordinates, SpawnTier, SpawnStatus } from '../../../domain/types';
-import { DatabasePool, dbPool } from '../../database/pool';
-import { ITransactionContext } from '../../database/types';
-import { GeoService } from '../../geo/GeoService';
-import { NotFoundError } from '../../../errors/NotFoundError';
+import { BoundingBox, Coordinates } from '../../../domain/types';
+import { ITransactionContext } from '../../../infrastructure/database/types';
+import { dbPool } from '../../database/pool';
+
 
 export class PostgresSpawnRepository implements ISpawnRepository {
-  constructor(private readonly pool: DatabasePool = dbPool) {}
+  constructor(private readonly pool: any = dbPool.getPool()) {}
 
-  private getExecutor(tx?: ITransactionContext): {
-    query: <T = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: T[]; rowCount: number | null }>;
-  } {
-    return tx || this.pool;
-  }
+  public async findById(id: string): Promise<SpawnPoint | null> {
+    const res = await this.pool.query(
+      `SELECT 
+        s.id,
+        s.code,
+        s.batch_id,
+        s.title,
+        s.description,
+        s.clue,
+        s.tier,
+        s.points,
+        s.claim_radius_meters,
+        s.lat,
+        s.lng,
+        s.svg_x,
+        s.svg_y,
+        s.status,
+        s.enabled,
+        s.claim_count,
+        s.max_claims,
+        s.created_at,
+        s.updated_at,
+        b.expires_at as batch_expires_at
+       FROM spawn_points s
+       LEFT JOIN spawn_batches b ON s.batch_id = b.id
+       WHERE s.id = $1`,
+      [id]
+    );
 
-  public async create(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
-    const executor = this.getExecutor(tx);
-    const sql = `
-      INSERT INTO spawn_points (
-        id,
-        code,
-        batch_id,
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters,
-        location,
-        svg_x,
-        svg_y,
-        status,
-        enabled,
-        claim_count,
-        max_claims,
-        created_at,
-        updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8,
-        $9, point($10, $11), $12, $13, $14, $15,
-        $16, $17, NOW(), NOW()
-      )
-      RETURNING
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt";
-    `;
-
-    const res = await executor.query<any>(sql, [
-      spawn.id,
-      spawn.code,
-      spawn.props.batchId || null,
-      spawn.title,
-      spawn.description || null,
-      spawn.clue || null,
-      spawn.tier,
-      spawn.points,
-      spawn.claimRadiusMeters,
-      spawn.coordinates.lng, // location[0] is lng
-      spawn.coordinates.lat, // location[1] is lat
-      spawn.svgCoordinates.x,
-      spawn.svgCoordinates.y,
-      spawn.status,
-      spawn.isEnabled,
-      spawn.claimCount,
-      spawn.maxClaims || null,
-    ]);
-
-    return this.mapRowToSpawn(res.rows[0]);
-  }
-
-  public async update(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
-    const executor = this.getExecutor(tx);
-    const sql = `
-      UPDATE spawn_points
-      SET
-        code = $2,
-        batch_id = $3,
-        title = $4,
-        description = $5,
-        clue = $6,
-        tier = $7,
-        points = $8,
-        claim_radius_meters = $9,
-        location = point($10, $11),
-        svg_x = $12,
-        svg_y = $13,
-        status = $14,
-        enabled = $15,
-        claim_count = $16,
-        max_claims = $17,
-        updated_at = NOW()
-      WHERE id = $1
-      RETURNING
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt";
-    `;
-
-    const res = await executor.query<any>(sql, [
-      spawn.id,
-      spawn.code,
-      spawn.props.batchId || null,
-      spawn.title,
-      spawn.description || null,
-      spawn.clue || null,
-      spawn.tier,
-      spawn.points,
-      spawn.claimRadiusMeters,
-      spawn.coordinates.lng,
-      spawn.coordinates.lat,
-      spawn.svgCoordinates.x,
-      spawn.svgCoordinates.y,
-      spawn.status,
-      spawn.isEnabled,
-      spawn.claimCount,
-      spawn.maxClaims || null,
-    ]);
-
-    if (!res.rows || res.rows.length === 0) {
-      throw new NotFoundError(`Spawn point "${spawn.id}" not found for update.`);
-    }
-
-    return this.mapRowToSpawn(res.rows[0]);
-  }
-
-  public async findById(id: string, tx?: ITransactionContext): Promise<SpawnPoint | null> {
-    const executor = this.getExecutor(tx);
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      WHERE id = $1;
-    `;
-
-    const res = await executor.query<any>(sql, [id]);
-    if (!res.rows || res.rows.length === 0) {
+    if (res.rowCount === 0 || !res.rows[0]) {
       return null;
     }
 
-    return this.mapRowToSpawn(res.rows[0]);
+    return this.mapRowToSpawnPoint(res.rows[0]);
   }
 
-  public async findByCode(code: string, tx?: ITransactionContext): Promise<SpawnPoint | null> {
-    const executor = this.getExecutor(tx);
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      WHERE LOWER(code) = LOWER($1);
-    `;
+  public async findByCode(code: string): Promise<SpawnPoint | null> {
+    const res = await this.pool.query(
+      `SELECT 
+        s.id,
+        s.code,
+        s.batch_id,
+        s.title,
+        s.description,
+        s.clue,
+        s.tier,
+        s.points,
+        s.claim_radius_meters,
+        s.lat,
+        s.lng,
+        s.svg_x,
+        s.svg_y,
+        s.status,
+        s.enabled,
+        s.claim_count,
+        s.max_claims,
+        s.created_at,
+        s.updated_at,
+        b.expires_at as batch_expires_at
+       FROM spawn_points s
+       LEFT JOIN spawn_batches b ON s.batch_id = b.id
+       WHERE s.code = $1`,
+      [code]
+    );
 
-    const res = await executor.query<any>(sql, [code.trim()]);
-    if (!res.rows || res.rows.length === 0) {
+    if (res.rowCount === 0 || !res.rows[0]) {
       return null;
     }
 
-    return this.mapRowToSpawn(res.rows[0]);
+    return this.mapRowToSpawnPoint(res.rows[0]);
   }
 
-  public async findAll(options: SpawnFilterOptions = {}): Promise<SpawnPoint[]> {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
-    let idx = 1;
+  public async findActive(): Promise<SpawnPoint[]> {
+    const res = await this.pool.query(
+      `SELECT 
+        s.id,
+        s.code,
+        s.batch_id,
+        s.title,
+        s.description,
+        s.clue,
+        s.tier,
+        s.points,
+        s.claim_radius_meters,
+        s.lat,
+        s.lng,
+        s.svg_x,
+        s.svg_y,
+        s.status,
+        s.enabled,
+        s.claim_count,
+        s.max_claims,
+        s.created_at,
+        s.updated_at,
+        b.expires_at as batch_expires_at
+       FROM spawn_points s
+       LEFT JOIN spawn_batches b ON s.batch_id = b.id
+       WHERE s.enabled = true 
+         AND s.status = 'active'
+         AND (b.expires_at IS NULL OR b.expires_at > NOW())`
+    );
 
-    if (options.status) {
-      conditions.push(`status = $${idx++}`);
-      params.push(options.status);
-    }
-
-    if (options.enabled !== undefined) {
-      conditions.push(`enabled = $${idx++}`);
-      params.push(options.enabled);
-    }
-
-    if (options.batchId) {
-      conditions.push(`batch_id = $${idx++}`);
-      params.push(options.batchId);
-    }
-
-    if (options.tier) {
-      conditions.push(`tier = $${idx++}`);
-      params.push(options.tier);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limit = Math.min(options.limit || 100, 500);
-    const offset = Math.max(options.offset || 0, 0);
-
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset};
-    `;
-
-    const res = await this.pool.query<any>(sql, params);
-    return res.rows.map((r) => this.mapRowToSpawn(r));
-  }
-
-  public async findActive(options: ActiveSpawnFilterOptions = {}): Promise<SpawnPoint[]> {
-    const conditions: string[] = ['status = \'active\'', 'enabled = true'];
-    const params: unknown[] = [];
-    let idx = 1;
-
-    if (options.batchId) {
-      conditions.push(`batch_id = $${idx++}`);
-      params.push(options.batchId);
-    }
-
-    if (options.bounds) {
-      const minLat = Math.min(options.bounds.northWest.lat, options.bounds.southEast.lat);
-      const maxLat = Math.max(options.bounds.northWest.lat, options.bounds.southEast.lat);
-      const minLng = Math.min(options.bounds.northWest.lng, options.bounds.southEast.lng);
-      const maxLng = Math.max(options.bounds.northWest.lng, options.bounds.southEast.lng);
-
-      conditions.push(`lat BETWEEN $${idx++} AND $${idx++}`);
-      params.push(minLat, maxLat);
-      conditions.push(`lng BETWEEN $${idx++} AND $${idx++}`);
-      params.push(minLng, maxLng);
-    }
-
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
-    const limit = Math.min(options.limit || 100, 500);
-    const offset = Math.max(options.offset || 0, 0);
-
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      ${whereClause}
-      ORDER BY points DESC, created_at DESC
-      LIMIT ${limit} OFFSET ${offset};
-    `;
-
-    const res = await this.pool.query<any>(sql, params);
-    return res.rows.map((r) => this.mapRowToSpawn(r));
-  }
-
-  public async findAvailableForBatch(limit: number = 10): Promise<SpawnPoint[]> {
-    // Strictly requires enabled = true so disabled spawns cannot be selected for batches
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      WHERE enabled = true
-      ORDER BY claim_count ASC, created_at DESC
-      LIMIT $1;
-    `;
-
-    const res = await this.pool.query<any>(sql, [limit]);
-    return res.rows.map((r) => this.mapRowToSpawn(r));
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
   }
 
   public async findWithinBounds(bounds: BoundingBox): Promise<SpawnPoint[]> {
@@ -384,149 +119,290 @@ export class PostgresSpawnRepository implements ISpawnRepository {
     const minLng = Math.min(bounds.northWest.lng, bounds.southEast.lng);
     const maxLng = Math.max(bounds.northWest.lng, bounds.southEast.lng);
 
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      WHERE lat BETWEEN $1 AND $2
-        AND lng BETWEEN $3 AND $4
-      ORDER BY created_at DESC;
-    `;
+    const res = await this.pool.query(
+      `SELECT 
+        s.id,
+        s.code,
+        s.batch_id,
+        s.title,
+        s.description,
+        s.clue,
+        s.tier,
+        s.points,
+        s.claim_radius_meters,
+        s.lat,
+        s.lng,
+        s.svg_x,
+        s.svg_y,
+        s.status,
+        s.enabled,
+        s.claim_count,
+        s.max_claims,
+        s.created_at,
+        s.updated_at,
+        b.expires_at as batch_expires_at
+       FROM spawn_points s
+       LEFT JOIN spawn_batches b ON s.batch_id = b.id
+       WHERE s.lat >= $1 AND s.lat <= $2
+         AND s.lng >= $3 AND s.lng <= $4
+         AND s.enabled = true`,
+      [minLat, maxLat, minLng, maxLng]
+    );
 
-    const res = await this.pool.query<any>(sql, [minLat, maxLat, minLng, maxLng]);
-    return res.rows.map((r) => this.mapRowToSpawn(r));
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
   }
 
   public async findNearby(coords: Coordinates, radiusMeters: number): Promise<SpawnPoint[]> {
-    const validated = GeoService.validateCoordinates(coords);
-    const degreeSlack = (radiusMeters / 111000) * 1.5;
+    const latDelta = radiusMeters / 111000;
+    const lngDelta = radiusMeters / (111000 * Math.cos((coords.lat * Math.PI) / 180));
 
-    const minLat = validated.lat - degreeSlack;
-    const maxLat = validated.lat + degreeSlack;
-    const minLng = validated.lng - degreeSlack;
-    const maxLng = validated.lng + degreeSlack;
+    const res = await this.pool.query(
+      `SELECT 
+        s.id,
+        s.code,
+        s.batch_id,
+        s.title,
+        s.description,
+        s.clue,
+        s.tier,
+        s.points,
+        s.claim_radius_meters,
+        s.lat,
+        s.lng,
+        s.svg_x,
+        s.svg_y,
+        s.status,
+        s.enabled,
+        s.claim_count,
+        s.max_claims,
+        s.created_at,
+        s.updated_at,
+        b.expires_at as batch_expires_at
+       FROM spawn_points s
+       LEFT JOIN spawn_batches b ON s.batch_id = b.id
+       WHERE s.lat >= $1 AND s.lat <= $2
+         AND s.lng >= $3 AND s.lng <= $4
+         AND s.enabled = true
+         AND s.status = 'active'`,
+      [coords.lat - latDelta, coords.lat + latDelta, coords.lng - lngDelta, coords.lng + lngDelta]
+    );
 
-    const sql = `
-      SELECT
-        id,
-        code,
-        batch_id as "batchId",
-        title,
-        description,
-        clue,
-        tier,
-        points,
-        claim_radius_meters as "claimRadiusMeters",
-        lat,
-        lng,
-        svg_x as "svgX",
-        svg_y as "svgY",
-        status,
-        enabled,
-        claim_count as "claimCount",
-        max_claims as "maxClaims",
-        created_at as "createdAt",
-        updated_at as "updatedAt"
-      FROM spawn_points
-      WHERE lat BETWEEN $1 AND $2
-        AND lng BETWEEN $3 AND $4;
-    `;
-
-    const res = await this.pool.query<any>(sql, [minLat, maxLat, minLng, maxLng]);
-    const results: SpawnPoint[] = [];
-
-    for (const row of res.rows) {
-      const spawn = this.mapRowToSpawn(row);
-      const dist = GeoService.distanceBetweenPoints(validated, spawn.coordinates);
-      if (dist <= radiusMeters) {
-        results.push(spawn);
-      }
-    }
-
-    return results;
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
   }
 
-  public async save(spawn: SpawnPoint, tx?: ITransactionContext): Promise<void> {
-    const existing = await this.findById(spawn.id, tx);
-    if (existing) {
-      await this.update(spawn, tx);
-    } else {
-      await this.create(spawn, tx);
-    }
+  public async save(spawn: SpawnPoint): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO spawn_points (
+        id, code, title, description, clue, tier, points, claim_radius_meters,
+        location, svg_x, svg_y, status, enabled, claim_count, max_claims, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8,
+        point($9, $10), $11, $12, $13, $14, $15, $16, $17, $18
+      ) ON CONFLICT (id) DO UPDATE
+      SET title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          clue = EXCLUDED.clue,
+          tier = EXCLUDED.tier,
+          points = EXCLUDED.points,
+          claim_radius_meters = EXCLUDED.claim_radius_meters,
+          location = EXCLUDED.location,
+          svg_x = EXCLUDED.svg_x,
+          svg_y = EXCLUDED.svg_y,
+          status = EXCLUDED.status,
+          enabled = EXCLUDED.enabled,
+          claim_count = EXCLUDED.claim_count,
+          max_claims = EXCLUDED.max_claims,
+          updated_at = NOW()`,
+      [
+        spawn.id,
+        spawn.code,
+        spawn.props.title,
+        spawn.props.description || null,
+        spawn.props.clue || null,
+        spawn.props.tier,
+        spawn.points,
+        spawn.claimRadiusMeters,
+        spawn.coordinates.lng,
+        spawn.coordinates.lat,
+        spawn.props.svgCoordinates.x,
+        spawn.props.svgCoordinates.y,
+        spawn.status,
+        spawn.isEnabled,
+        spawn.props.claimCount,
+        spawn.props.maxClaims || null,
+        spawn.props.spawnedAt || new Date(),
+        new Date(),
+      ]
+    );
   }
 
-  public async updateStatus(
-    id: string,
-    status: string,
-    enabled?: boolean,
-    tx?: ITransactionContext
-  ): Promise<void> {
-    const executor = this.getExecutor(tx);
-    const updates: string[] = ['status = $2', 'updated_at = NOW()'];
-    const params: unknown[] = [id, status];
-
+  public async updateStatus(id: string, status: string, enabled?: boolean): Promise<void> {
     if (enabled !== undefined) {
-      updates.push(`enabled = $3`);
-      params.push(enabled);
-    }
-
-    const sql = `
-      UPDATE spawn_points
-      SET ${updates.join(', ')}
-      WHERE id = $1;
-    `;
-
-    const res = await executor.query(sql, params);
-    if (res.rowCount === 0) {
-      throw new NotFoundError(`Spawn point "${id}" not found.`);
+      await this.pool.query(
+        `UPDATE spawn_points 
+         SET status = $1, enabled = $2, updated_at = NOW()
+         WHERE id = $3`,
+        [status, enabled, id]
+      );
+    } else {
+      await this.pool.query(
+        `UPDATE spawn_points 
+         SET status = $1, updated_at = NOW()
+         WHERE id = $2`,
+        [status, id]
+      );
     }
   }
 
-  private mapRowToSpawn(row: any): SpawnPoint {
+  public async create(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
+    const client = tx || this.pool;
+    await client.query(
+      `INSERT INTO spawn_points (
+        id, code, batch_id, title, description, clue, tier, points, claim_radius_meters,
+        location, svg_x, svg_y, status, enabled, claim_count, max_claims, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, point($10, $11), $12, $13, $14, $15, $16, $17, $18, $19
+      )`,
+      [
+        spawn.id,
+        spawn.code,
+        (spawn as any).batchId || null,
+        spawn.props.title,
+        spawn.props.description || null,
+        spawn.props.clue || null,
+        spawn.props.tier,
+        spawn.points,
+        spawn.claimRadiusMeters,
+        spawn.coordinates.lng,
+        spawn.coordinates.lat,
+        spawn.props.svgCoordinates.x,
+        spawn.props.svgCoordinates.y,
+        spawn.status,
+        spawn.isEnabled,
+        spawn.props.claimCount || 0,
+        spawn.props.maxClaims || null,
+        spawn.props.spawnedAt || new Date(),
+        new Date(),
+      ]
+    );
+    return spawn;
+  }
+
+  public async update(spawn: SpawnPoint, tx?: ITransactionContext): Promise<SpawnPoint> {
+    const client = tx || this.pool;
+    await client.query(
+      `UPDATE spawn_points SET
+        title = $2, description = $3, clue = $4, tier = $5, points = $6,
+        claim_radius_meters = $7, location = point($8, $9), svg_x = $10, svg_y = $11,
+        status = $12, enabled = $13, updated_at = NOW()
+       WHERE id = $1`,
+      [
+        spawn.id,
+        spawn.props.title,
+        spawn.props.description || null,
+        spawn.props.clue || null,
+        spawn.props.tier,
+        spawn.points,
+        spawn.claimRadiusMeters,
+        spawn.coordinates.lng,
+        spawn.coordinates.lat,
+        spawn.props.svgCoordinates.x,
+        spawn.props.svgCoordinates.y,
+        spawn.status,
+        spawn.isEnabled,
+      ]
+    );
+    return spawn;
+  }
+
+  public async findAll(options?: import('../../../repositories/ISpawnRepository').SpawnFilterOptions): Promise<SpawnPoint[]> {
+    let query = `
+      SELECT s.*, b.expires_at as batch_expires_at
+      FROM spawn_points s
+      LEFT JOIN spawn_batches b ON s.batch_id = b.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (options?.status) {
+      query += ` AND s.status = $${paramIdx++}`;
+      params.push(options.status);
+    }
+    if (options?.enabled !== undefined) {
+      query += ` AND s.enabled = $${paramIdx++}`;
+      params.push(options.enabled);
+    }
+    if (options?.batchId) {
+      query += ` AND s.batch_id = $${paramIdx++}`;
+      params.push(options.batchId);
+    }
+    if (options?.tier) {
+      query += ` AND s.tier = $${paramIdx++}`;
+      params.push(options.tier);
+    }
+    query += ' ORDER BY s.created_at DESC';
+    if (options?.limit) {
+      query += ` LIMIT $${paramIdx++}`;
+      params.push(options.limit);
+    }
+    if (options?.offset) {
+      query += ` OFFSET $${paramIdx++}`;
+      params.push(options.offset);
+    }
+
+    const res = await this.pool.query(query, params);
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
+  }
+
+  public async findAvailableForBatch(limit = 100): Promise<SpawnPoint[]> {
+    const res = await this.pool.query(
+      `SELECT s.*, NULL as batch_expires_at
+       FROM spawn_points s
+       WHERE s.enabled = true
+         AND (s.batch_id IS NULL OR NOT EXISTS (
+           SELECT 1 FROM spawn_batches b
+           WHERE b.id = s.batch_id AND b.status = 'active'
+         ))
+       ORDER BY RANDOM()
+       LIMIT $1`,
+      [limit]
+    );
+    return res.rows.map((row: any) => this.mapRowToSpawnPoint(row));
+  }
+
+  private mapRowToSpawnPoint(row: any): SpawnPoint {
+
     const props: SpawnPointProps = {
       id: row.id,
       code: row.code,
-      batchId: row.batchId || null,
       title: row.title,
-      description: row.description || null,
-      clue: row.clue || null,
-      tier: row.tier as SpawnTier,
-      points: Number(row.points),
-      claimRadiusMeters: Number(row.claimRadiusMeters),
+      description: row.description || undefined,
+      clue: row.clue || undefined,
+      zoneId: row.zone_id || 'zone-default',
+      zoneName: row.zone_name || 'Campus',
       coordinates: {
-        lat: Number(row.lat),
-        lng: Number(row.lng),
+        lat: typeof row.lat === 'number' ? row.lat : parseFloat(row.lat),
+        lng: typeof row.lng === 'number' ? row.lng : parseFloat(row.lng),
       },
       svgCoordinates: {
-        x: Number(row.svgX),
-        y: Number(row.svgY),
+        x: typeof row.svg_x === 'number' ? row.svg_x : parseInt(row.svg_x || '0', 10),
+        y: typeof row.svg_y === 'number' ? row.svg_y : parseInt(row.svg_y || '0', 10),
       },
-      status: row.status as SpawnStatus,
-      enabled: Boolean(row.enabled),
-      claimCount: Number(row.claimCount || 0),
-      maxClaims: row.maxClaims ? Number(row.maxClaims) : null,
-      zoneId: 'zone-canonical',
-      zoneName: 'Campus Core',
-      createdAt: new Date(row.createdAt),
-      updatedAt: new Date(row.updatedAt),
+      points: typeof row.points === 'number' ? row.points : parseInt(row.points, 10),
+      tier: row.tier,
+      status: row.status,
+      claimRadiusMeters:
+        typeof row.claim_radius_meters === 'number'
+          ? row.claim_radius_meters
+          : parseFloat(row.claim_radius_meters),
+      enabled: row.enabled,
+      spawnedAt: row.created_at ? new Date(row.created_at) : undefined,
+      expiresAt: row.batch_expires_at
+        ? new Date(row.batch_expires_at)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000),
+      claimCount: typeof row.claim_count === 'number' ? row.claim_count : parseInt(row.claim_count || '0', 10),
+      maxClaims: row.max_claims ? parseInt(row.max_claims, 10) : undefined,
     };
 
     return new SpawnPoint(props);

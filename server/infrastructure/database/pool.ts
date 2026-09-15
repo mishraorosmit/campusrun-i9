@@ -45,6 +45,10 @@ export class DatabasePool {
     });
   }
 
+  public isInitialized(): boolean {
+    return this.pool !== null;
+  }
+
   public getPool(): Pool {
     if (!this.pool) {
       throw new Error('[DatabasePool] Pool has not been initialized. Call initialize() first.');

@@ -60,15 +60,11 @@ export class GeoService {
     const rawCoords = typeof coordsOrLat === 'number' ? { lat: coordsOrLat, lng: maybeLng! } : coordsOrLat;
     const validated = GeoService.validateCoordinates(rawCoords);
 
-    const { northWest, southEast, svgWidth, svgHeight, latSpan, lngSpan } = AUTHORITATIVE_CAMPUS_BOUNDS;
-
-    // Normalize between 0 and 1
-    const normX = Math.max(0, Math.min(1, (validated.lng - northWest.lng) / lngSpan));
-    const normY = Math.max(0, Math.min(1, (northWest.lat - validated.lat) / latSpan));
-
+    const dLat = (validated.lat - 20.2485) * 100000;
+    const dLng = (validated.lng - 85.8010) * 100000;
     return {
-      x: Math.round(normX * svgWidth),
-      y: Math.round(normY * svgHeight),
+      x: Math.round(-0.04877298402879626 * dLat + 6.109566269317218 * dLng + 854.0601054134638),
+      y: Math.round(-6.488199724926953 * dLat - 0.3366389296906753 * dLng + 1384.771642581982),
     };
   }
 
@@ -81,15 +77,10 @@ export class GeoService {
     const rawSvg = typeof coordsOrX === 'number' ? { x: coordsOrX, y: maybeY! } : coordsOrX;
     const validated = GeoService.validateSvgCoordinates(rawSvg);
 
-    const { northWest, svgWidth, svgHeight, latSpan, lngSpan } = AUTHORITATIVE_CAMPUS_BOUNDS;
-
-    const normX = Math.max(0, Math.min(1, validated.x / svgWidth));
-    const normY = Math.max(0, Math.min(1, validated.y / svgHeight));
-
-    const lat = Number((northWest.lat - normY * latSpan).toFixed(6));
-    const lng = Number((northWest.lng + normX * lngSpan).toFixed(6));
-
-    return { lat, lng };
+    const determinant = -0.04877298402879626 * -0.3366389296906753 - 6.109566269317218 * -6.488199724926953;
+    const dLat = ((validated.x - 854.0601054134638) * -0.3366389296906753 - (validated.y - 1384.771642581982) * 6.109566269317218) / determinant;
+    const dLng = (-0.04877298402879626 * (validated.y - 1384.771642581982) - -6.488199724926953 * (validated.x - 854.0601054134638)) / determinant;
+    return { lat: Number((20.2485 + dLat / 100000).toFixed(7)), lng: Number((85.8010 + dLng / 100000).toFixed(7)) };
   }
 
   /**

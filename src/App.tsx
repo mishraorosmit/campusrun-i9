@@ -50,9 +50,14 @@ export default function App() {
   const {
     lat: playerLat,
     lng: playerLng,
+    accuracy: playerAccuracy,
+    heading: playerHeading,
+    speed: playerSpeed,
     isSimulated: isSimulatingGps,
+    isLoading: isLocationLoading,
     toggleSimulation,
     setSimulatedPosition,
+    retry: retryLocation,
     error: locationError,
   } = useGeoLocation({ simulate: true });
 
@@ -106,39 +111,50 @@ export default function App() {
     };
   }, [addToast]);
 
+  const isClaimingRef = React.useRef<boolean>(false);
+
   // Handle Spawn Claiming
   const handleClaimSpawn = async (spawnId: string): Promise<ClaimResult> => {
-    const res = await gameService.claimSpawn(spawnId, playerLat, playerLng);
-    if (res.success) {
-      addToast({
-        title: 'Points Claimed!',
-        message: res.message,
-        type: 'success',
-      });
-      // Refresh local state from authoritative service
-      const [updatedSpawns, updatedPlayer, updatedClaims, updatedWeekly, updatedAllTime, updatedNotifs] =
-        await Promise.all([
-          gameService.getSpawns(),
-          gameService.getPlayerProfile(),
-          gameService.getClaimsHistory(),
-          gameService.getWeeklyLeaderboard(),
-          gameService.getAllTimeLeaderboard(),
-          gameService.getNotifications(),
-        ]);
-      setSpawns(updatedSpawns);
-      setPlayer(updatedPlayer);
-      setClaims(updatedClaims);
-      setWeeklyLeaderboard(updatedWeekly);
-      setAllTimeLeaderboard(updatedAllTime);
-      setNotifications(updatedNotifs);
-    } else {
-      addToast({
-        title: 'Claim Denied',
-        message: res.message,
-        type: 'warning',
-      });
+    if (isClaimingRef.current) {
+      return { success: false, message: 'Claim request already in progress', pointsAwarded: 0 };
     }
-    return res;
+    isClaimingRef.current = true;
+    
+    try {
+      const res = await gameService.claimSpawn(spawnId, playerLat, playerLng);
+      if (res.success) {
+        addToast({
+          title: 'Points Claimed!',
+          message: res.message,
+          type: 'success',
+        });
+        // Refresh local state from authoritative service
+        const [updatedSpawns, updatedPlayer, updatedClaims, updatedWeekly, updatedAllTime, updatedNotifs] =
+          await Promise.all([
+            gameService.getSpawns(),
+            gameService.getPlayerProfile(),
+            gameService.getClaimsHistory(),
+            gameService.getWeeklyLeaderboard(),
+            gameService.getAllTimeLeaderboard(),
+            gameService.getNotifications(),
+          ]);
+        setSpawns(updatedSpawns);
+        setPlayer(updatedPlayer);
+        setClaims(updatedClaims);
+        setWeeklyLeaderboard(updatedWeekly);
+        setAllTimeLeaderboard(updatedAllTime);
+        setNotifications(updatedNotifs);
+      } else {
+        addToast({
+          title: 'Claim Denied',
+          message: res.message,
+          type: 'warning',
+        });
+      }
+      return res;
+    } finally {
+      isClaimingRef.current = false;
+    }
   };
 
   const handleMarkNotificationAsRead = async (id: string) => {
@@ -169,6 +185,7 @@ export default function App() {
             notifications={notifications}
             onMarkNotificationAsRead={handleMarkNotificationAsRead}
             onSwitchToAdmin={() => setCurrentMode('admin')}
+            onToggleTracking={() => toggleSimulation(!isSimulatingGps)}
           >
             {/* Screen 03 / 04 / 04a / 05: Map & Point Detail Flow */}
             {activePlayerTab === 'map' && (
@@ -178,10 +195,17 @@ export default function App() {
                 player={player}
                 playerLat={playerLat}
                 playerLng={playerLng}
+                playerAccuracy={playerAccuracy}
+                playerHeading={playerHeading}
+                accuracyMeters={playerAccuracy}
+                heading={playerHeading}
+                speed={playerSpeed}
+                isLocationLoading={isLocationLoading}
                 onClaimSpawn={handleClaimSpawn}
                 isSimulatingGps={isSimulatingGps}
                 onToggleSimulatedGps={() => toggleSimulation(!isSimulatingGps)}
                 onUpdateSimulatedPosition={setSimulatedPosition}
+                onRetryGps={retryLocation}
                 locationError={locationError}
               />
             )}

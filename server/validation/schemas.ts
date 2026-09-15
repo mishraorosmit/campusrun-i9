@@ -8,14 +8,29 @@ export const ClaimSubmissionSchema: ValidationSchema = {
       message: 'spawnId is required and must be a non-empty string',
     },
     {
+      field: 'playerId',
+      validate: (val) => val === undefined || SchemaValidator.isNonEmptyString(val),
+      message: 'playerId must be a non-empty string if provided',
+    },
+    {
+      field: 'lat',
+      validate: (val) => val === undefined || SchemaValidator.isLatitude(val),
+      message: 'lat must be a valid latitude between -90 and 90',
+    },
+    {
+      field: 'lng',
+      validate: (val) => val === undefined || SchemaValidator.isLongitude(val),
+      message: 'lng must be a valid longitude between -180 and 180',
+    },
+    {
       field: 'latitude',
-      validate: (val) => SchemaValidator.isLatitude(val),
-      message: 'latitude is required and must be a valid latitude between -90 and 90',
+      validate: (val) => val === undefined || SchemaValidator.isLatitude(val),
+      message: 'latitude must be a valid latitude between -90 and 90 if provided',
     },
     {
       field: 'longitude',
-      validate: (val) => SchemaValidator.isLongitude(val),
-      message: 'longitude is required and must be a valid longitude between -180 and 180',
+      validate: (val) => val === undefined || SchemaValidator.isLongitude(val),
+      message: 'longitude must be a valid longitude between -180 and 180 if provided',
     },
   ],
 };
@@ -59,8 +74,8 @@ export const AdminCreateSpawnSchema: ValidationSchema = {
   rules: [
     {
       field: 'name',
-      validate: (val) => SchemaValidator.isNonEmptyString(val),
-      message: 'name is required and must be a non-empty string',
+      validate: (val, body) => SchemaValidator.isNonEmptyString(val) || SchemaValidator.isNonEmptyString(body?.title),
+      message: 'name or title is required and must be a non-empty string',
     },
     {
       field: 'points',
@@ -97,8 +112,8 @@ export const AdminEditSpawnSchema: ValidationSchema = {
   rules: [
     {
       field: 'name',
-      validate: (val) => val === undefined || SchemaValidator.isNonEmptyString(val),
-      message: 'name must be a non-empty string if provided',
+      validate: (val, body) => val === undefined || SchemaValidator.isNonEmptyString(val) || SchemaValidator.isNonEmptyString(body?.title),
+      message: 'name or title must be a non-empty string if provided',
     },
     {
       field: 'points',
@@ -128,6 +143,40 @@ export const AdminEditSpawnSchema: ValidationSchema = {
       field: 'enabled',
       validate: (val) => val === undefined || SchemaValidator.isBoolean(val),
       message: 'enabled must be a boolean if provided',
+    },
+  ],
+};
+
+export const PushSubscriptionSchema: ValidationSchema = {
+  rules: [
+    {
+      field: 'endpoint',
+      validate: (val) => SchemaValidator.isValidUrl(val),
+      message: 'endpoint is required and must be a valid HTTP or HTTPS URL',
+    },
+    {
+      field: 'keys',
+      validate: (val, data) => {
+        const p256dh =
+          val && typeof val === 'object' && 'p256dh' in (val as object)
+            ? (val as any).p256dh
+            : data?.p256dh;
+        return SchemaValidator.isNonEmptyString(p256dh);
+      },
+      message: 'keys.p256dh (or p256dh) is required and must be a non-empty string',
+    },
+    {
+      field: 'auth',
+      validate: (val, data) => {
+        const auth =
+          data?.keys && typeof data.keys === 'object' && 'auth' in (data.keys as object)
+            ? (data.keys as any).auth
+            : val !== undefined
+            ? val
+            : data?.auth;
+        return SchemaValidator.isNonEmptyString(auth);
+      },
+      message: 'keys.auth (or auth) is required and must be a non-empty string',
     },
   ],
 };

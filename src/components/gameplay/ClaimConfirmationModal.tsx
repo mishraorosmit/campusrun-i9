@@ -32,11 +32,11 @@ export const ClaimConfirmationModal: React.FC<ClaimConfirmationModalProps> = ({
   const rankDiff = oldRank - newRank;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#1A1310]/80 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-[#FAF4EB] border border-[#EADBC8] rounded-3xl p-6 shadow-2xl flex flex-col gap-5 text-[#1A1310] animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-[#1A1310]/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4">
+      <div className="w-full max-w-sm bg-[#F4EFE6] border-[3px] border-[#1A1310] p-5 sm:p-6 shadow-[5px_5px_0_#F16321] flex flex-col gap-5 text-[#1A1310] animate-in fade-in zoom-in-95 duration-200">
         {/* Restrained Success Icon Badge */}
         <div className="flex items-center justify-between">
-          <div className="w-12 h-12 rounded-2xl bg-[#FBEEE1] border border-[#EADBC8] text-[#F16321] flex items-center justify-center">
+          <div className="w-12 h-12 bg-[#FDE8D7] border-2 border-[#1A1310] text-[#F16321] flex items-center justify-center">
             <Check className="w-6 h-6 stroke-[3]" />
           </div>
 
@@ -69,7 +69,7 @@ export const ClaimConfirmationModal: React.FC<ClaimConfirmationModalProps> = ({
         </div>
 
         {/* Updated Standings Box */}
-        <div className="bg-[#FBEEE1]/60 border border-[#EADBC8] rounded-2xl p-4 flex flex-col gap-3">
+        <div className="bg-white border-2 border-[#1A1310] p-4 flex flex-col gap-3">
           {/* Weekly Score */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-[#70625B]">
@@ -92,7 +92,7 @@ export const ClaimConfirmationModal: React.FC<ClaimConfirmationModalProps> = ({
                   <span className="text-[#70625B] line-through font-normal">#{oldRank}</span>
                   <ArrowUp className="w-3.5 h-3.5" />
                   <span>#{newRank}</span>
-                  <span className="text-[10px] bg-[#F16321] text-[#FAF4EB] px-1.5 py-0.2 rounded-full font-bold">
+                  <span className="text-[10px] bg-[#F16321] text-white px-1.5 py-0.2 font-bold">
                     +{rankDiff}
                   </span>
                 </div>

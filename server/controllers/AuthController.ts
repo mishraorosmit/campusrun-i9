@@ -175,6 +175,7 @@ export class AuthController {
       res.json({
         success: true,
         accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         expiresIn: tokens.expiresIn,
         user: tokens.user,
       });

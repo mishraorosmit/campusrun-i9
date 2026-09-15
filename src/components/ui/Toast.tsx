@@ -39,7 +39,7 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
               exit={{ opacity: 0, y: -12, scale: 0.95 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className={cn(
-                'pointer-events-auto bg-[#FAF4EB] text-[#1A1310] border shadow-lg rounded-xl p-3.5 flex items-start gap-3',
+                'pointer-events-auto bg-white text-[#1A1310] border-2 shadow-[3px_3px_0_#1A1310] p-3.5 flex items-start gap-3',
                 borderColors[toast.type]
               )}
             >
@@ -57,7 +57,7 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
               <button
                 type="button"
                 onClick={() => onDismiss(toast.id)}
-                className="p-1 text-[#70625B] hover:text-[#1A1310] rounded-md transition-colors shrink-0"
+                className="p-1 text-[#70625B] hover:text-[#1A1310] transition-colors shrink-0"
                 aria-label="Dismiss notification"
               >
                 <X className="w-3.5 h-3.5" />

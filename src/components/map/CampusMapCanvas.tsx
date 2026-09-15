@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
 import { SpawnPoint, CampusZone } from '../../types';
-import { getTurfDistanceMeters, gpsToSvg } from '../../lib/geo';
-import { CampusIllustrationLayer, CampusIllustrationDefs } from './CampusIllustrationLayer';
+import { getTurfDistanceMeters, gpsToSvg, legacyCoordinatesToSvg, metersToSvgUnits } from '../../lib/geo';
+import { CampusSvgLayer } from './CampusSvgLayer';
 import { CampusLandmark, getLandmarkById, getSvgHighlightTargetId } from '../../data/landmarks';
 
 // ---------------------------------------------------------------------------
@@ -14,13 +14,20 @@ export interface CampusMapCanvasProps {
   zones: CampusZone[];
   playerLat: number;
   playerLng: number;
+  playerAccuracy?: number | null;
+  playerHeading?: number | null;
+  accuracyMeters?: number | null;
+  heading?: number | null;
+  isSimulated?: boolean;
   selectedSpawnId: string | null;
   onSelectSpawn: (spawn: SpawnPoint) => void;
   selectedLandmarkId?: string | null;
   onSelectLandmark?: (landmark: CampusLandmark | null) => void;
   showZoneOverlay?: boolean;
   onMapClick?: () => void;
+  onMapCoordinateClick?: (coords: { svgX: number; svgY: number }) => void;
   zoomAction?: { type: 'in' | 'out' | 'recenter' | 'focus'; target?: { x: number; y: number } } | null;
+  onZoomActionComplete?: () => void;
 }
 
 export interface ProcessedSpawnNode {
@@ -114,14 +121,23 @@ CampusZonesLayer.displayName = 'CampusZonesLayer';
 interface PlayerMarkerLayerProps {
   svgX: number;
   svgY: number;
+  accuracy?: number | null;
+  heading?: number | null;
+  isSimulated?: boolean;
 }
 
 /**
- * Isolated player location marker with animated radar halo
+ * Isolated player location marker with animated radar halo and live orientation cone
  * Memoized to avoid re-rendering on external canvas updates unless player coordinates change
  */
 const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
-  ({ svgX, svgY }) => {
+  ({ svgX, svgY, accuracy, heading, isSimulated }) => {
+    // Dynamic accuracy radius in SVG units (clamped to sensible visual range: min 28, max 220)
+    const accuracyRadius = Math.max(
+      28,
+      Math.min(220, accuracy ? metersToSvgUnits(accuracy) : 45)
+    );
+
     return (
       <g
         id="player-location"
@@ -129,23 +145,23 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
         className="pointer-events-none"
         style={{ pointerEvents: 'none' }}
       >
-        {/* Accuracy & Proximity Claim Radius Halo */}
+        {/* Dynamic Accuracy & Proximity Claim Radius Halo */}
         <circle
-          r="45"
+          r={accuracyRadius}
           fill="#F16321"
-          fillOpacity="0.12"
+          fillOpacity={isSimulated ? 0.08 : 0.14}
           stroke="#F16321"
-          strokeWidth="2"
+          strokeWidth="1.75"
           strokeDasharray="4,4"
           className="animate-pulse"
         />
 
         {/* Expanding Radar Wave */}
-        <circle r="28" fill="none" stroke="#F16321" strokeWidth="2.5" opacity="0.6">
+        <circle r="26" fill="none" stroke="#F16321" strokeWidth="2.5" opacity="0.6">
           <animate
             attributeName="r"
             from="14"
-            to="55"
+            to={Math.max(45, Math.min(90, accuracyRadius))}
             dur="2.4s"
             repeatCount="indefinite"
           />
@@ -158,18 +174,29 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
           />
         </circle>
 
+        {/* Heading Indicator Arrow */}
+        {heading !== null && heading !== undefined && !isNaN(heading) && (
+          <path
+            d="M 0 -10 L 7 8 L 0 5 L -7 8 Z"
+            fill="#F16321"
+            stroke="#1A1310"
+            strokeWidth="2"
+            transform={`rotate(${heading})`}
+          />
+        )}
+
         {/* Core Player Dot */}
-        <circle r="13" fill="#FAF4EB" stroke="#1A1310" strokeWidth="3" />
+        <circle r="13" fill="#FFFFFF" stroke="#1A1310" strokeWidth="3" />
         <circle r="8" fill="#F16321" />
 
         {/* Player Label Pill */}
         <g transform="translate(0, -26)">
           <rect
-            x="-36"
+            x="-38"
             y="-14"
-            width="72"
+            width="76"
             height="18"
-            rx="9"
+            rx="0"
             fill="#1A1310"
             stroke="#FAF4EB"
             strokeWidth="1.5"
@@ -179,17 +206,23 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
             y="-2"
             textAnchor="middle"
             fill="#FAF4EB"
-            fontSize="10"
+            fontSize="9"
             fontWeight="bold"
             letterSpacing="1"
+            className="font-mono"
           >
-            YOU
+            {isSimulated ? 'YOU · SIM' : 'YOU · GPS'}
           </text>
         </g>
       </g>
     );
   },
-  (prev, next) => prev.svgX === next.svgX && prev.svgY === next.svgY
+  (prev, next) =>
+    prev.svgX === next.svgX &&
+    prev.svgY === next.svgY &&
+    prev.accuracy === next.accuracy &&
+    prev.heading === next.heading &&
+    prev.isSimulated === next.isSimulated
 );
 PlayerMarkerLayer.displayName = 'PlayerMarkerLayer';
 
@@ -202,14 +235,23 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
   zones,
   playerLat,
   playerLng,
+  playerAccuracy,
+  playerHeading,
+  accuracyMeters,
+  heading,
+  isSimulated = false,
   selectedSpawnId,
   onSelectSpawn,
   selectedLandmarkId,
   onSelectLandmark,
   showZoneOverlay = true,
   onMapClick,
+  onMapCoordinateClick,
   zoomAction,
+  onZoomActionComplete,
 }) => {
+  const effectiveAccuracy = accuracyMeters !== undefined ? accuracyMeters : playerAccuracy;
+  const effectiveHeading = heading !== undefined ? heading : playerHeading;
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
@@ -231,8 +273,9 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
         const width = containerRef.current.clientWidth || 375;
         const height = containerRef.current.clientHeight || 600;
         const scale = 1.1;
-        const targetX = width / 2 - landmark.svgX * scale;
-        const targetY = height / 2 - landmark.svgY * scale;
+        const target = legacyCoordinatesToSvg(landmark.svgX, landmark.svgY);
+        const targetX = width / 2 - target.x * scale;
+        const targetY = height / 2 - target.y * scale;
 
         d3.select(svgRef.current)
           .transition()
@@ -288,8 +331,8 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
       return {
         id: spawn.id,
         spawn,
-        svgX: spawn.svgX,
-        svgY: spawn.svgY,
+        svgX: gpsToSvg(spawn.lat, spawn.lng).x,
+        svgY: gpsToSvg(spawn.lat, spawn.lng).y,
         points: spawn.points,
         distance,
         inRange,
@@ -317,16 +360,12 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
 
     const layer = d3.select(spawnsLayerRef.current);
 
-    // Teardrop pin SVG path definition
-    const pinPathD =
-      'M 0 0 C -18 -18, -22 -32, -22 -44 C -22 -60, -12 -70, 0 -70 C 12 -70, 22 -60, 22 -44 C 22 -32, 18 -18, 0 0 Z';
-
     // D3 Data Join on ProcessedSpawnNode by ID
     const nodes = layer
       .selectAll<SVGGElement, ProcessedSpawnNode>('g.spawn-point-node')
       .data(processedSpawns, (d: ProcessedSpawnNode) => d.id);
 
-    // ENTER: Create new SVG elements for newly added spawns
+    // ENTER: Create square kiosk-style claim markers for newly added spawns
     const enterNodes = nodes
       .enter()
       .append('g')
@@ -366,11 +405,22 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
       .attr('stroke-dasharray', '4,4')
       .style('display', (d: ProcessedSpawnNode) => (d.isSelected ? 'block' : 'none'));
 
-    // Enter: Pin Body Path
+    // Enter: Ticket marker body and stem
+    enterNodes
+      .append('rect')
+      .attr('class', 'pin-body')
+      .attr('x', -29)
+      .attr('y', -66)
+      .attr('width', 58)
+      .attr('height', 42)
+      .attr('fill', (d: ProcessedSpawnNode) => d.pinBg)
+      .attr('stroke', (d: ProcessedSpawnNode) => d.strokeColor)
+      .attr('stroke-width', (d: ProcessedSpawnNode) => d.strokeWidth);
+
     enterNodes
       .append('path')
-      .attr('class', 'pin-body')
-      .attr('d', pinPathD)
+      .attr('class', 'pin-stem')
+      .attr('d', 'M -8 -24 L 0 -14 L 8 -24 Z')
       .attr('fill', (d: ProcessedSpawnNode) => d.pinBg)
       .attr('stroke', (d: ProcessedSpawnNode) => d.strokeColor)
       .attr('stroke-width', (d: ProcessedSpawnNode) => d.strokeWidth);
@@ -380,7 +430,7 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
       .append('text')
       .attr('class', 'pin-badge font-display')
       .attr('x', 0)
-      .attr('y', -42)
+      .attr('y', -41)
       .attr('text-anchor', 'middle')
       .attr('fill', (d: ProcessedSpawnNode) => d.textColor)
       .attr('font-size', 13)
@@ -401,9 +451,9 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
       .attr('width', 84)
       .attr('height', 18)
       .attr('rx', 6)
-      .attr('fill', '#FAF4EB')
-      .attr('stroke', '#EADBC8')
-      .attr('stroke-width', 1);
+      .attr('fill', '#FFFFFF')
+      .attr('stroke', '#1A1310')
+      .attr('stroke-width', 2);
 
     tagGroup
       .append('text')
@@ -585,21 +635,47 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
         .ease(d3.easeCubicOut)
         .call(zoom.transform, d3.zoomIdentity.translate(targetX, targetY).scale(scale));
     }
-  }, [zoomAction, playerSvg.x, playerSvg.y]);
+
+    onZoomActionComplete?.();
+  }, [zoomAction]);
 
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full bg-[#F8F3EA] overflow-hidden select-none cursor-grab active:cursor-grabbing touch-none"
-      onClick={() => {
+      onClick={(e) => {
         onSelectLandmark?.(null);
         onMapClick?.();
+
+        // If tap-to-walk coordinate handler is provided, transform click to SVG space
+        if (onMapCoordinateClick && svgRef.current && gRef.current) {
+          const svgEl = svgRef.current;
+          const gEl = gRef.current;
+          const pt = svgEl.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          const screenCTM = gEl.getScreenCTM();
+          if (screenCTM) {
+            const transformed = pt.matrixTransform(screenCTM.inverse());
+            if (
+              transformed.x >= 0 &&
+              transformed.x <= 1991 &&
+              transformed.y >= 0 &&
+              transformed.y <= 3704
+            ) {
+              onMapCoordinateClick({
+                svgX: Math.round(transformed.x),
+                svgY: Math.round(transformed.y),
+              });
+            }
+          }
+        }
       }}
     >
       <svg
         ref={svgRef}
         className="w-full h-full"
-        viewBox="0 0 1572 2927"
+        viewBox="0 0 1991 3704"
         preserveAspectRatio="xMidYMid slice"
         style={{ shapeRendering: 'geometricPrecision', textRendering: 'optimizeLegibility' }}
       >
@@ -618,21 +694,17 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
           </filter>
 
           {/* Canonical Campus Illustration Filters from MAP SVG/Group 2-2.svg */}
-          <CampusIllustrationDefs />
         </defs>
 
         {/* Master Scalable/Pannable Layer (Hardware Accelerated) */}
         <g ref={gRef} id="campus-world" style={{ willChange: 'transform', transformOrigin: '0 0' }}>
           {/* Layer 1: Canonical Full SVG Base Map (MAP SVG/Group 2-2.svg) */}
-          <CampusIllustrationLayer
+          <CampusSvgLayer
             selectedLandmarkId={selectedLandmarkId}
             onSelectLandmark={handleSelectBuilding}
           />
 
-          {/* Layer 2: Optional Zone Tint Layer (10-14% opacity, transparent fills, thin #F16321 dashed outline) */}
-          <CampusZonesLayer zones={zones} showZoneOverlay={showZoneOverlay} />
-
-          {/* Layer 3: Tapped-Landmark Highlight (Active 3px #F16321 outline & subtle halo sitting cleanly above base and zones) */}
+          {/* Tapped-landmark highlight stays above the single source SVG. */}
           <g id="tapped-landmark-highlight" className="pointer-events-none" style={{ pointerEvents: 'none' }}>
             {selectedLandmarkId && (
               <g className="pointer-events-none">
@@ -655,8 +727,14 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
           {/* Layer 4: D3 Differential Rendered Spawn Points Layer */}
           <g ref={spawnsLayerRef} id="spawn-points" />
 
-          {/* Layer 5: Player Location Marker with Live Pulsing Radar Ring */}
-          <PlayerMarkerLayer svgX={playerSvg.x} svgY={playerSvg.y} />
+          {/* Layer 5: Player Location Marker with Live Pulsing Radar Ring & Accuracy Halo */}
+          <PlayerMarkerLayer
+            svgX={playerSvg.x}
+            svgY={playerSvg.y}
+            accuracy={effectiveAccuracy}
+            heading={effectiveHeading}
+            isSimulated={isSimulated}
+          />
         </g>
       </svg>
     </div>

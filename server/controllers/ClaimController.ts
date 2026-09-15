@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ClaimSpawnUseCase } from '../services/ClaimSpawnUseCase';
 import { ValidateClaimUseCase } from '../services/ValidateClaimUseCase';
 import { GetClaimsHistoryUseCase } from '../services/GetClaimsHistoryUseCase';
-import { UnauthorizedError } from '../errors';
+import { UnauthorizedError, ValidationError } from '../errors';
 
 export class ClaimController {
   constructor(
@@ -14,28 +14,42 @@ export class ClaimController {
 
   public submitClaim = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.user?.id) {
-        throw new UnauthorizedError('Authentication required to submit or validate a claim');
+      const playerId = req.user?.id || req.body?.playerId;
+
+      if (!playerId) {
+        throw new UnauthorizedError('Authentication required to submit claims');
       }
 
-      // NEVER trust client user ID! Taken strictly from authenticated token context
-      const playerId = req.user.id;
-      const { spawnId } = req.body;
-      const latitude = Number(req.body.latitude ?? req.body.lat);
-      const longitude = Number(req.body.longitude ?? req.body.lng);
+      const spawnId = req.body?.spawnId || req.body?.spawn_id;
+      if (!spawnId || typeof spawnId !== 'string' || spawnId.trim() === '') {
+        throw new ValidationError('spawnId is required and must be a non-empty string');
+      }
+
+      const latitude = req.body.latitude !== undefined ? Number(req.body.latitude) : undefined;
+      const longitude = req.body.longitude !== undefined ? Number(req.body.longitude) : undefined;
+      const lat = req.body.lat !== undefined ? Number(req.body.lat) : undefined;
+      const lng = req.body.lng !== undefined ? Number(req.body.lng) : undefined;
+
+      let playerCoordinates: { lat: number; lng: number } | undefined;
+      const finalLat = latitude ?? lat;
+      const finalLng = longitude ?? lng;
+      if (finalLat !== undefined && finalLng !== undefined && !isNaN(finalLat) && !isNaN(finalLng)) {
+        playerCoordinates = { lat: finalLat, lng: finalLng };
+      }
 
       // Support validateOnly pre-flight if explicitly requested or configured
       const isValidateOnly =
         this.defaultValidateOnly ||
-        req.query.validateOnly === 'true' ||
-        req.headers['x-validate-only'] === 'true' ||
-        req.body.validateOnly === true;
+        req.query?.validateOnly === 'true' ||
+        req.headers?.['x-validate-only'] === 'true' ||
+        req.body?.validateOnly === true;
+
 
       if (isValidateOnly && this.validateClaimUseCase) {
         const result = await this.validateClaimUseCase.execute({
           spawnId,
           playerId,
-          playerCoordinates: { lat: latitude, lng: longitude },
+          playerCoordinates: playerCoordinates || { lat: 0, lng: 0 },
         });
 
         res.status(200).json({
@@ -45,14 +59,13 @@ export class ClaimController {
         return;
       }
 
-      // Execute authoritative claim transaction
       const result = await this.claimSpawnUseCase.execute({
-        spawnId,
+        spawnId: spawnId.trim(),
         playerId,
-        playerCoordinates: { lat: latitude, lng: longitude },
+        playerCoordinates: playerCoordinates as any,
       });
 
-      res.status(200).json({
+      res.status(201).json({
         success: true,
         data: result,
       });

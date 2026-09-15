@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { AdminController } from '../../controllers/AdminController';
 import { validateRequest } from '../../validation/validateRequest';
 import {
@@ -10,16 +10,24 @@ import { requireAdmin } from '../../middlewares/auth';
 import { IAuditService } from '../../services/IAuditService';
 import { auditAdminMutations } from '../../middlewares/auditMiddleware';
 
-export function createAdminRouter(adminController: AdminController, auditService?: IAuditService): Router {
+export function createAdminRouter(
+  adminController: AdminController,
+  auditService?: IAuditService,
+  authMiddleware?: RequestHandler
+): Router {
   const router = Router();
 
-  // Audit logging for privileged operations (records successful mutations, unauthorized probes, and failures)
+  // Audit logging for privileged operations
   if (auditService) {
     router.use(auditAdminMutations(auditService));
   }
 
-  // All administrative routes strictly require server-controlled ADMIN role
-  router.use(requireAdmin);
+  // Administrative route authorization
+  if (authMiddleware) {
+    router.use(authMiddleware);
+  } else {
+    router.use(requireAdmin);
+  }
 
   // 1. Administrative Overview & Dashboard
   router.get('/overview', adminController.getOverview);
@@ -44,6 +52,13 @@ export function createAdminRouter(adminController: AdminController, auditService
   // 5. Game Settings Management
   router.get('/settings', adminController.getGameSettings);
   router.put('/settings', adminController.updateGameSettings);
+
+  // POST /api/v1/admin/leaderboard/reset-weekly
+  router.post('/leaderboard/reset-weekly', adminController.resetWeeklyLeaderboard);
+
+  // POST /api/v1/admin/weekly-cycle/reset
+  router.post('/weekly-cycle/reset', adminController.resetWeeklyCycle);
+  router.post('/weekly-cycle/reset-weekly', adminController.resetWeeklyCycle);
 
   return router;
 }

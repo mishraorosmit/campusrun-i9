@@ -1,5 +1,6 @@
 import { IPlayerRepository } from '../../../repositories/IPlayerRepository';
 import { Player } from '../../../domain/entities/Player';
+import { ITransactionContext } from '../../../repositories/ITransactionManager';
 
 export class InMemoryPlayerRepository implements IPlayerRepository {
   private players: Map<string, Player> = new Map();
@@ -55,15 +56,48 @@ export class InMemoryPlayerRepository implements IPlayerRepository {
     this.players.set(id, updated);
   }
 
+  async updatePointsTx(id: string, additionalPoints: number, tx: ITransactionContext): Promise<void> {
+    return this.updatePoints(id, additionalPoints);
+  }
+
   async incrementStreak(id: string): Promise<void> {
+    const player = await this.findById(id);
+    if (player) {
+      player.props.currentStreakDays += 1;
+      this.players.set(id, player);
+    }
+  }
+
+  async updatePreferences(
+    id: string,
+    preferences: Record<string, string | number | boolean | null>
+  ): Promise<Record<string, string | number | boolean | null>> {
     const player = this.players.get(id);
-    if (!player) return;
+    if (!player) {
+      throw new Error(`Player with id "${id}" not found`);
+    }
+
+    const currentPreferences = player.preferences;
+    const mergedPreferences: Record<string, string | number | boolean | null> = {
+      ...currentPreferences,
+      ...preferences,
+    };
 
     const updated = new Player({
       ...player.props,
-      currentStreakDays: player.props.currentStreakDays + 1,
+      preferences: mergedPreferences,
       lastActiveAt: new Date(),
     });
+
     this.players.set(id, updated);
+    return mergedPreferences;
+  }
+
+  async findAllUserIds(): Promise<string[]> {
+    return Array.from(this.players.keys());
+  }
+
+  async findAll(): Promise<Player[]> {
+    return Array.from(this.players.values());
   }
 }

@@ -71,7 +71,7 @@ export const LandmarkDetailSheet: React.FC<LandmarkDetailSheetProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 text-[#70625B] hover:text-[#1A1310] hover:bg-[#FBEEE1] rounded-lg transition-colors"
+          className="p-2 border-2 border-[#1A1310] text-[#70625B] hover:text-[#1A1310] hover:bg-[#FDE8D7] transition-colors"
           aria-label="Close landmark detail"
         >
           <X className="w-4 h-4" />
@@ -95,11 +95,11 @@ export const LandmarkDetailSheet: React.FC<LandmarkDetailSheetProps> = ({
         {activeNearest ? (
           <div
             onClick={() => onSelectSpawn(activeNearest.spawn)}
-            className="p-3 rounded-xl border border-[#EADBC8] bg-[#FFFBF7] hover:border-[#F16321] transition-all flex items-center justify-between gap-3 shadow-2xs cursor-pointer active:scale-[0.99]"
+            className="p-3 border-2 border-[#1A1310] bg-white hover:bg-[#FDE8D7] transition-all flex items-center justify-between gap-3 shadow-[2px_2px_0_#1A1310] cursor-pointer active:translate-x-0.5 active:translate-y-0.5"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Points Badge */}
-              <div className="w-9 h-9 rounded-lg bg-[#F16321] text-[#FAF4EB] font-display font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-9 h-9 bg-[#F16321] text-white font-display font-bold text-xs flex items-center justify-center shrink-0 border-2 border-[#1A1310]">
                 +{activeNearest.spawn.points}
               </div>
 
@@ -154,7 +154,7 @@ export const LandmarkDetailSheet: React.FC<LandmarkDetailSheetProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-2.5 rounded-xl border border-[#EADBC8] bg-[#FAF4EB] text-xs text-[#70625B] flex items-center gap-2">
+          <div className="p-2.5 border-2 border-[#1A1310] bg-white text-xs text-[#70625B] flex items-center gap-2">
             <MapPin className="w-3.5 h-3.5 text-[#70625B]/50 shrink-0" />
             <span>No active spawn nearby at this time</span>
           </div>

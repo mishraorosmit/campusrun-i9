@@ -43,9 +43,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   };
 
   return (
-    <div className="flex-1 w-full h-full bg-[#FBF6EE] flex flex-col overflow-y-auto p-4 gap-4 pb-20">
+    <div className="flex-1 w-full h-full bg-[#F4EFE6] flex flex-col overflow-y-auto p-3 sm:p-4 gap-3 sm:gap-4 pb-20">
       {/* Player Header Identity (Screen 07) */}
-      <div className="p-4 bg-[#FAF4EB] border border-[#EADBC8] rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+      <div className="p-3 sm:p-4 bg-white border-2 border-[#1A1310] flex items-center justify-between gap-3 shadow-[3px_3px_0_#1A1310]">
         <div className="flex items-center gap-3.5 min-w-0">
           <Avatar name={player.username} size="lg" tier={player.tier} showBadge />
           <div className="flex flex-col min-w-0">
@@ -71,7 +71,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         {onOpenNotifications && (
           <button
             onClick={onOpenNotifications}
-            className="relative p-2.5 rounded-xl bg-[#FBEEE1] border border-[#EADBC8] text-[#1A1310] hover:text-[#F16321] transition-colors"
+            className="relative p-2.5 bg-[#FDE8D7] border-2 border-[#1A1310] text-[#1A1310] hover:text-[#F16321] transition-colors"
             title="Open Notifications Feed"
           >
             <Bell className="w-5 h-5" />
@@ -86,21 +86,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       {/* Stats Overview Grid (Screen 07) */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="p-3 bg-[#FAF4EB] border border-[#EADBC8] rounded-xl flex flex-col gap-1">
+        <div className="p-3 bg-white border-2 border-[#1A1310] flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase text-[#70625B]">WEEKLY PTS</span>
           <span className="text-base font-extrabold font-mono text-[#F16321]">
             {formatNumber(player.seasonPoints)}
           </span>
         </div>
 
-        <div className="p-3 bg-[#FAF4EB] border border-[#EADBC8] rounded-xl flex flex-col gap-1">
+        <div className="p-3 bg-white border-2 border-[#1A1310] flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase text-[#70625B]">ALL-TIME PTS</span>
           <span className="text-base font-bold font-mono text-[#1A1310]">
             {formatNumber(player.totalPoints)}
           </span>
         </div>
 
-        <div className="p-3 bg-[#FAF4EB] border border-[#EADBC8] rounded-xl flex flex-col gap-1">
+        <div className="p-3 bg-white border-2 border-[#1A1310] flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase text-[#70625B]">TOTAL CLAIMS</span>
           <span className="text-base font-bold font-mono text-[#1A1310]">
             {player.claimsCount}
@@ -109,7 +109,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       </div>
 
       {/* Notification Preferences (Screen 07) */}
-      <div className="p-4 bg-[#FAF4EB] border border-[#EADBC8] rounded-2xl flex flex-col gap-3 shadow-xs">
+      <div className="p-4 bg-white border-2 border-[#1A1310] flex flex-col gap-3 shadow-[3px_3px_0_#1A1310]">
         <span className="text-xs font-bold font-display uppercase tracking-wider text-[#70625B]">
           PREFERENCES
         </span>
@@ -143,7 +143,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         </div>
 
         {claims.length === 0 ? (
-          <div className="p-6 bg-[#FAF4EB] border border-[#EADBC8] rounded-2xl text-center flex flex-col items-center gap-2 text-[#70625B]">
+          <div className="p-6 bg-white border-2 border-[#1A1310] text-center flex flex-col items-center gap-2 text-[#70625B]">
             <Award className="w-8 h-8 opacity-40 text-[#70625B]" />
             <span className="text-xs font-bold text-[#1A1310]">NO CLAIMS YET</span>
             <p className="text-[11px]">
@@ -155,10 +155,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             {claims.map((claim) => (
               <div
                 key={claim.id}
-                className="p-3 bg-[#FAF4EB] border border-[#EADBC8] rounded-xl flex items-center justify-between gap-3 shadow-2xs"
+                className="p-3 bg-white border-2 border-[#1A1310] flex items-center justify-between gap-3 shadow-[2px_2px_0_#1A1310]"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-[#FBEEE1] border border-[#EADBC8] text-[#F16321] flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-8 h-8 bg-[#FDE8D7] border border-[#1A1310] text-[#F16321] flex items-center justify-center font-bold text-xs shrink-0">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
 

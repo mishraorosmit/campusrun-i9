@@ -33,6 +33,11 @@ export interface AppConfig {
   JWT_SECRET: string;
   JWT_ACCESS_EXPIRATION_SECONDS: number;
   REFRESH_TOKEN_EXPIRATION_SECONDS: number;
+
+  // Web Push & VAPID Configuration
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT: string;
 }
 
 interface ValidationResult {
@@ -190,6 +195,9 @@ export function validateEnvironment(env: NodeJS.ProcessEnv = process.env): Valid
       JWT_SECRET: jwtSecret,
       JWT_ACCESS_EXPIRATION_SECONDS: jwtAccessExpiration,
       REFRESH_TOKEN_EXPIRATION_SECONDS: refreshTokenExpiration,
+      VAPID_PUBLIC_KEY: env.VAPID_PUBLIC_KEY || '',
+      VAPID_PRIVATE_KEY: env.VAPID_PRIVATE_KEY || '',
+      VAPID_SUBJECT: env.VAPID_SUBJECT || 'mailto:admin@campus.edu',
     },
   };
 }

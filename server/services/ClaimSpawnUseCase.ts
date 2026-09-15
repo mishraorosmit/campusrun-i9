@@ -1,352 +1,198 @@
-import crypto from 'crypto';
-import { IGeospatialService } from './IGeospatialService';
+import { randomUUID } from 'crypto';
+import { ISpawnRepository } from '../repositories/ISpawnRepository';
+import { IPlayerRepository } from '../repositories/IPlayerRepository';
+import { IClaimRepository } from '../repositories/IClaimRepository';
+import { ILeaderboardRepository } from '../repositories/ILeaderboardRepository';
+import { ITransactionManager } from '../repositories/ITransactionManager';
 import { IEventBus } from '../events/IEventBus';
-import { eventBus } from '../events/EventBus';
-import { ITransactionManager } from '../infrastructure/database/types';
-import { transactionManager } from '../infrastructure/database/transaction';
-import { Coordinates } from '../domain/types';
-import { ClaimSuccessEvent } from '../domain/events';
-import { NotFoundError, DomainError, ValidationError } from '../errors';
+import { IRealtimeService } from './IRealtimeService';
+import { IGeofencingService, GeofencingRules, ClaimRules } from '../domain/rules';
+import { Claim } from '../domain/entities/Claim';
+import { SpawnClaimedEvent, RankChangedEvent } from '../domain/events';
+import { SubmitClaimInputDTO, ClaimResultDTO } from './dtos';
+import { NotFoundError, DomainError } from '../errors';
 import { ErrorCodes } from '../errors/ErrorCodes';
-import { SchemaValidator } from '../validation/validator';
-
-export interface ExecuteClaimInput {
-  spawnId: string;
-  playerId: string;
-  playerCoordinates: Coordinates;
-}
-
-export interface AuthoritativeClaimResult {
-  claimId: string;
-  spawnId: string;
-  spawnName: string;
-  spawnCode: string;
-  pointsAwarded: number;
-  weeklyPoints: number;
-  allTimePoints: number;
-  totalPoints: number;
-  claimedAt: string;
-  distanceMeters: number;
-  weeklyRank: number | null;
-  valid: true;
-  playerId: string;
-  batchId: string;
-}
 
 export class ClaimSpawnUseCase {
   constructor(
-    private readonly geoService: IGeospatialService,
-    private readonly eventBusInstance: IEventBus = eventBus,
-    private readonly txManager: ITransactionManager = transactionManager
+    private readonly spawnRepo: ISpawnRepository,
+    private readonly playerRepo: IPlayerRepository,
+    private readonly claimRepo: IClaimRepository,
+    private readonly leaderboardRepo: ILeaderboardRepository,
+    private readonly geoCalculator: IGeofencingService,
+    private readonly eventBus: IEventBus,
+    private readonly txManager: ITransactionManager,
+    private readonly realtimeService?: IRealtimeService
   ) {}
 
-  public async execute(input: ExecuteClaimInput): Promise<AuthoritativeClaimResult> {
-    const { spawnId, playerId, playerCoordinates } = input;
-
-    // 0. Pre-flight schema validation
-    if (!spawnId || typeof spawnId !== 'string' || spawnId.trim().length === 0) {
-      throw new ValidationError('Invalid spawn ID', [
-        { field: 'spawnId', message: 'spawnId is required and must be a non-empty string' },
-      ]);
+  public async execute(input: SubmitClaimInputDTO): Promise<ClaimResultDTO> {
+    // 1. Fetch Spawn
+    const spawn = await this.spawnRepo.findById(input.spawnId);
+    if (!spawn) {
+      throw new NotFoundError(`Spawn point "${input.spawnId}" not found`);
     }
 
-    if (!playerId || typeof playerId !== 'string' || playerId.trim().length === 0) {
-      throw new ValidationError('Invalid player ID', [
-        { field: 'playerId', message: 'playerId is required and must be a non-empty string' },
-      ]);
+    // 2. Fetch Player
+    const player = await this.playerRepo.findById(input.playerId);
+    if (!player) {
+      throw new NotFoundError(`Player "${input.playerId}" not found`);
     }
 
-    if (
-      !playerCoordinates ||
-      !SchemaValidator.isLatitude(playerCoordinates.lat) ||
-      !SchemaValidator.isLongitude(playerCoordinates.lng)
-    ) {
-      throw new ValidationError('Invalid player coordinates', [
+    // 3. Check existing claims for this player on this spawn
+    const existingClaimsCount = await this.claimRepo.countBySpawnAndPlayer(input.spawnId, input.playerId);
+
+    // 4. Validate claim rules
+    const ruleCheck = ClaimRules.validateCanClaim(spawn, existingClaimsCount);
+    if (!ruleCheck.canClaim) {
+      const isAlreadyClaimed = ruleCheck.reason?.includes('already claimed');
+      const isExpired = ruleCheck.reason?.includes('expired');
+      const isNotActive = ruleCheck.reason?.includes('not active');
+      throw new DomainError(
+        ruleCheck.reason || 'Cannot claim spawn point',
+        isAlreadyClaimed
+          ? ErrorCodes.ALREADY_CLAIMED
+          : isExpired
+          ? ErrorCodes.SPAWN_EXPIRED
+          : isNotActive
+          ? ErrorCodes.SPAWN_NOT_ACTIVE
+          : ErrorCodes.DOMAIN_ERROR
+      );
+    }
+
+    // 5. Determine coordinates and verify geofencing / claim radius
+    const playerCoords =
+      input.playerCoordinates &&
+      typeof input.playerCoordinates.lat === 'number' &&
+      typeof input.playerCoordinates.lng === 'number' &&
+      !isNaN(input.playerCoordinates.lat) &&
+      !isNaN(input.playerCoordinates.lng)
+        ? input.playerCoordinates
+        : spawn.coordinates;
+
+    const geofence = GeofencingRules.isWithinClaimRadius(playerCoords, spawn, this.geoCalculator);
+    if (!geofence.isWithin) {
+      throw new DomainError(
+        `Player is out of range (${geofence.distanceMeters}m away; maximum radius is ${spawn.claimRadiusMeters}m)`,
+        ErrorCodes.OUT_OF_RANGE,
         {
-          field: 'coordinates',
-          message: 'Valid coordinates are required with lat between -90 and 90 and lng between -180 and 180',
-        },
-      ]);
+          distanceMeters: geofence.distanceMeters,
+          claimRadiusMeters: spawn.claimRadiusMeters,
+        }
+      );
     }
 
-    // 1-8. Authoritative Atomic Database Transaction
-    const claimTxResult = await this.txManager.runInTransaction(async (tx) => {
-      // 1. Re-check critical spawn validity inside transaction with row lock
-      const spawnRes = await tx.query<any>(
-        `SELECT 
-           id, code, title, description, clue, batch_id as "batchId",
-           tier, points, claim_radius_meters as "claimRadiusMeters",
-           lat, lng, status, enabled, claim_count as "claimCount",
-           max_claims as "maxClaims"
-         FROM spawn_points
-         WHERE id = $1
-         FOR UPDATE;`,
-        [spawnId]
-      );
-
-      if (!spawnRes.rows || spawnRes.rows.length === 0) {
-        throw new NotFoundError(`Spawn point "${spawnId}" not found`);
-      }
-
-      const spawn = spawnRes.rows[0];
-
-      if (!spawn.enabled) {
-        throw new DomainError(
-          `Spawn point "${spawnId}" is disabled and cannot be claimed`,
-          ErrorCodes.SPAWN_NOT_ACTIVE,
-          { spawnId, enabled: false }
-        );
-      }
-
-      if (spawn.status === 'expired') {
-        throw new DomainError(
-          `Spawn point "${spawnId}" has expired`,
-          ErrorCodes.SPAWN_EXPIRED,
-          { spawnId, status: spawn.status }
-        );
-      }
-
-      if (spawn.status !== 'active') {
-        throw new DomainError(
-          `Spawn point "${spawnId}" is not active (status: ${spawn.status})`,
-          ErrorCodes.SPAWN_NOT_ACTIVE,
-          { spawnId, status: spawn.status }
-        );
-      }
-
-      if (spawn.maxClaims !== null && spawn.maxClaims !== undefined && spawn.claimCount >= spawn.maxClaims) {
-        throw new DomainError(
-          `Spawn point "${spawn.code}" has reached its maximum claim limit (${spawn.maxClaims})`,
-          ErrorCodes.CLAIM_LIMIT_REACHED,
-          { spawnId, claimCount: spawn.claimCount, maxClaims: spawn.maxClaims }
-        );
-      }
-
-      if (!spawn.batchId) {
-        throw new DomainError(
-          `Spawn point "${spawnId}" does not belong to any active spawn batch`,
-          ErrorCodes.SPAWN_NOT_ACTIVE,
-          { spawnId }
-        );
-      }
-
-      // Check batch validity and expiration under transaction
-      const batchRes = await tx.query<any>(
-        `SELECT id, cycle_id as "cycleId", batch_number as "batchNumber",
-                started_at as "startedAt", expires_at as "expiresAt", status, is_active as "isActive"
-         FROM spawn_batches
-         WHERE id = $1;`,
-        [spawn.batchId]
-      );
-
-      if (!batchRes.rows || batchRes.rows.length === 0) {
-        throw new DomainError(
-          `Spawn point "${spawnId}" does not belong to any valid spawn batch`,
-          ErrorCodes.SPAWN_NOT_ACTIVE,
-          { spawnId, batchId: spawn.batchId }
-        );
-      }
-
-      const batch = batchRes.rows[0];
-      const now = new Date();
-      const batchExpiresAt = new Date(batch.expiresAt);
-
-      if (batch.status === 'EXPIRED' || now >= batchExpiresAt) {
-        throw new DomainError(
-          `Spawn point "${spawnId}" or batch "${batch.id}" has expired`,
-          ErrorCodes.SPAWN_EXPIRED,
-          {
-            spawnId,
-            batchId: batch.id,
-            expiresAt: batchExpiresAt.toISOString(),
-          }
-        );
-      }
-
-      if (batch.status !== 'ACTIVE' || !batch.isActive) {
-        throw new DomainError(
-          `Spawn point "${spawnId}" does not belong to the currently active batch`,
-          ErrorCodes.SPAWN_NOT_ACTIVE,
-          { spawnId, batchId: spawn.batchId, batchStatus: batch.status }
-        );
-      }
-
-      // 2. Prevent duplicate player+spawn claims (fast pre-check inside tx)
-      const existingClaimRes = await tx.query(
-        `SELECT id FROM claims WHERE player_id = $1 AND spawn_id = $2 AND batch_id = $3 LIMIT 1;`,
-        [playerId, spawnId, batch.id]
-      );
-      if (existingClaimRes.rowCount && existingClaimRes.rowCount > 0) {
-        throw new DomainError(
-          `Spawn point "${spawn.code}" has already been claimed by this player in the active batch`,
-          ErrorCodes.ALREADY_CLAIMED,
-          { spawnId, playerId, batchId: batch.id }
-        );
-      }
-
-      // 3. Calculate / verify authoritative server-side distance
-      const spawnCoords: Coordinates = {
-        lat: Number(spawn.lat),
-        lng: Number(spawn.lng),
-      };
-      const distanceMeters = this.geoService.distanceMeters(playerCoordinates, spawnCoords);
-      const authoritativeRadius = Number(spawn.claimRadiusMeters);
-
-      if (distanceMeters > authoritativeRadius) {
-        throw new DomainError(
-          `Player is out of range (${distanceMeters.toFixed(1)}m away; maximum radius is ${authoritativeRadius.toFixed(1)}m)`,
-          ErrorCodes.OUT_OF_RANGE,
-          {
-            distanceMeters,
-            claimRadiusMeters: authoritativeRadius,
-            playerCoordinates,
-            spawnCoordinates: spawnCoords,
-          }
-        );
-      }
-
-      // 4. Create the claim record (with duplicate constraint protection)
-      const claimId = crypto.randomUUID();
-      const authoritativePoints = Number(spawn.points);
-
-      try {
-        await tx.query(
-          `INSERT INTO claims (
-             id, player_id, spawn_id, batch_id, points_awarded, streak_multiplier,
-             distance_meters, player_location, claimed_at
-           ) VALUES (
-             $1, $2, $3, $4, $5, $6,
-             $7, point($8, $9), NOW()
-           );`,
-          [
-            claimId,
-            playerId,
-            spawnId,
-            batch.id,
-            authoritativePoints,
-            1.00,
-            distanceMeters,
-            playerCoordinates.lng,
-            playerCoordinates.lat,
-          ]
-        );
-      } catch (insertErr: any) {
-        if (
-          insertErr?.code === '23505' ||
-          insertErr?.constraint === 'uq_claims_player_spawn_batch' ||
-          insertErr?.details?.constraint === 'uq_claims_player_spawn_batch'
-        ) {
-          throw new DomainError(
-            `Spawn point "${spawn.code}" has already been claimed by this player in the active batch`,
-            ErrorCodes.ALREADY_CLAIMED,
-            { spawnId, playerId, batchId: batch.id }
-          );
-        }
-        throw insertErr;
-      }
-
-      // Increment spawn claim count
-      await tx.query(
-        `UPDATE spawn_points SET claim_count = claim_count + 1, updated_at = NOW() WHERE id = $1;`,
-        [spawnId]
-      );
-
-      // 5, 6, 7. Award points & update weekly and all-time points in player profile
-      const profileRes = await tx.query<{
-        total_points: number;
-        season_points: number;
-        claims_count: number;
-      }>(
-        `UPDATE profiles
-         SET total_points = total_points + $2,
-             season_points = season_points + $2,
-             claims_count = claims_count + 1,
-             last_active_at = NOW(),
-             updated_at = NOW()
-         WHERE user_id = $1
-         RETURNING total_points, season_points, claims_count;`,
-        [playerId, authoritativePoints]
-      );
-
-      if (!profileRes.rows || profileRes.rows.length === 0) {
-        throw new NotFoundError(`Player profile for user "${playerId}" not found.`);
-      }
-
-      const updatedProfile = profileRes.rows[0];
-
-      // Query resulting weekly rank using window function
-      let weeklyRank: number | null = null;
-      try {
-        const rankRes = await tx.query<{ rank: string }>(
-          `SELECT rank FROM (
-             SELECT user_id, RANK() OVER (ORDER BY season_points DESC, updated_at ASC) as rank
-             FROM profiles
-           ) r WHERE user_id = $1;`,
-          [playerId]
-        );
-        if (rankRes.rows && rankRes.rows.length > 0) {
-          weeklyRank = parseInt(rankRes.rows[0].rank, 10);
-        }
-      } catch {
-        weeklyRank = null;
-      }
-
-      const claimedAt = new Date();
-
-      return {
-        claimId,
-        spawnId,
-        spawnName: spawn.title,
-        spawnCode: spawn.code,
-        pointsAwarded: authoritativePoints,
-        weeklyPoints: Number(updatedProfile.season_points),
-        allTimePoints: Number(updatedProfile.total_points),
-        totalPoints: Number(updatedProfile.total_points),
-        claimedAt: claimedAt.toISOString(),
-        claimedAtDate: claimedAt,
-        distanceMeters,
-        weeklyRank,
-        valid: true as const,
-        playerId,
-        batchId: batch.id,
-        playerCoordinates,
-      };
+    // 6. Create claim entity
+    const claimId = randomUUID();
+    const claim = new Claim({
+      id: claimId,
+      spawnId: spawn.id,
+      spawnCode: spawn.code,
+      spawnTitle: spawn.props.title,
+      playerId: player.id,
+      zoneName: spawn.props.zoneName,
+      pointsAwarded: spawn.points,
+      claimedAt: new Date(),
+      tier: spawn.props.tier,
+      playerCoordinates: playerCoords,
+      distanceAtClaimMeters: geofence.distanceMeters,
     });
 
-    // 8. Emit CLAIM_SUCCESS domain event AFTER transaction commits successfully
-    await this.eventBusInstance.publish(
-      new ClaimSuccessEvent({
-        claimId: claimTxResult.claimId,
-        spawnId: claimTxResult.spawnId,
-        spawnName: claimTxResult.spawnName,
-        spawnCode: claimTxResult.spawnCode,
-        playerId: claimTxResult.playerId,
-        pointsAwarded: claimTxResult.pointsAwarded,
-        weeklyPoints: claimTxResult.weeklyPoints,
-        allTimePoints: claimTxResult.allTimePoints,
-        claimedAt: claimTxResult.claimedAtDate,
-        distanceMeters: claimTxResult.distanceMeters,
-        weeklyRank: claimTxResult.weeklyRank,
-        playerCoordinates: claimTxResult.playerCoordinates,
-      })
-    );
+    // 7. Persist claim and update player points in a single transaction
+    await this.txManager.runInTransaction(async (tx) => {
+      const claimInserted = await this.claimRepo.saveTx(claim, tx);
+      if (!claimInserted) {
+        throw new DomainError('Player has already claimed this spawn point during the current rotation', ErrorCodes.ALREADY_CLAIMED);
+      }
+      await this.playerRepo.updatePointsTx(player.id, spawn.points, tx);
+    });
+    
+    await this.leaderboardRepo.recordScore(player.id, spawn.points);
 
-    // Return authoritative result containing only server-derived values
+    // 8. Publish domain events (Strictly after transaction commit, wrapped in try/catch)
+    try {
+      await this.eventBus.publish(
+        new SpawnClaimedEvent({
+          claimId: claim.id,
+          spawnId: spawn.id,
+          spawnCode: spawn.code,
+          playerId: player.id,
+          pointsAwarded: spawn.points,
+          playerLat: playerCoords.lat,
+          playerLng: playerCoords.lng,
+          zoneId: spawn.props.zoneId,
+        })
+      );
+    } catch (err) {
+      console.error('[ClaimSpawnUseCase] Error publishing SpawnClaimedEvent:', err);
+    }
+
+    // Check if player rank changed and emit RankChangedEvent if detectable
+    try {
+      if (this.leaderboardRepo.getPlayerWeeklyRank) {
+        const newRank = await this.leaderboardRepo.getPlayerWeeklyRank(player.id);
+        const oldRank = player.props.rank;
+        if (newRank !== null && newRank !== undefined && newRank !== oldRank) {
+          await this.eventBus.publish(
+            new RankChangedEvent({
+              playerId: player.id,
+              username: player.username,
+              oldRank: oldRank || null,
+              newRank,
+              points: (player.props.seasonPoints || 0) + spawn.points,
+              period: 'weekly',
+              timestamp: new Date(),
+            })
+          );
+        }
+      }
+    } catch (err) {
+      console.error('[ClaimSpawnUseCase] Error publishing RankChangedEvent:', err);
+    }
+
+    // 9. Realtime broadcast (Strictly after database commit)
+    if (this.realtimeService) {
+      // Broadcast anonymous public claim summary to campus_global room (NO PII)
+      this.realtimeService.broadcastPublicClaim({
+        spawnId: spawn.id,
+        spawnCode: spawn.code,
+        pointsAwarded: spawn.points,
+        zoneName: spawn.props.zoneName,
+        timestamp: claim.claimedAt.toISOString(),
+      });
+
+      // Emit full personal receipt to private user:<userId> room
+      this.realtimeService.emitPersonalClaimSuccess(player.id, {
+        claimId: claim.id,
+        spawnId: spawn.id,
+        spawnCode: spawn.code,
+        playerId: player.id,
+        pointsAwarded: spawn.points,
+        newTotalPoints: (player.props.totalPoints || 0) + spawn.points,
+        newSeasonPoints: (player.props.seasonPoints || 0) + spawn.points,
+        claimedAt: claim.claimedAt.toISOString(),
+      });
+
+      // Broadcast lightweight leaderboard update signal to campus_global (Strictly NO full-state dump)
+      this.realtimeService.broadcastLeaderboardUpdated({
+        type: 'weekly',
+        playerRankDelta: {
+          playerId: player.id,
+          points: spawn.points,
+          newRank: 0,
+        },
+        updatedAt: claim.claimedAt.toISOString(),
+      });
+    }
+
     return {
-      claimId: claimTxResult.claimId,
-      spawnId: claimTxResult.spawnId,
-      spawnName: claimTxResult.spawnName,
-      spawnCode: claimTxResult.spawnCode,
-      pointsAwarded: claimTxResult.pointsAwarded,
-      weeklyPoints: claimTxResult.weeklyPoints,
-      allTimePoints: claimTxResult.allTimePoints,
-      totalPoints: claimTxResult.totalPoints,
-      claimedAt: claimTxResult.claimedAt,
-      distanceMeters: claimTxResult.distanceMeters,
-      weeklyRank: claimTxResult.weeklyRank,
-      valid: true,
-      playerId: claimTxResult.playerId,
-      batchId: claimTxResult.batchId,
+      success: true,
+      claimId: claim.id,
+      spawnId: spawn.id,
+      spawnCode: spawn.code,
+      pointsAwarded: spawn.points,
+      tier: spawn.props.tier,
+      distanceMeters: geofence.distanceMeters,
+      claimedAt: claim.claimedAt.toISOString(),
     };
   }
 }

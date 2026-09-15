@@ -3,6 +3,7 @@ import { IPlayerRepository } from '../repositories/IPlayerRepository';
 import { Player } from '../domain/entities/Player';
 import { GoogleOidcClient, GoogleTokenPayload } from '../infrastructure/auth/GoogleOidcClient';
 import { JwtUtils, JwtPayload } from '../infrastructure/auth/JwtUtils';
+import { PlayerRole } from '../domain/types';
 import { UnauthorizedError, ForbiddenError, AppError } from '../errors';
 
 export interface AuthTokens {
@@ -13,7 +14,7 @@ export interface AuthTokens {
     id: string;
     email: string;
     username: string;
-    role: 'STUDENT' | 'ADMIN';
+    role: PlayerRole;
   };
 }
 
@@ -336,6 +337,12 @@ export class AuthService {
         status: 'active',
         createdAt: new Date(),
         lastActiveAt: new Date(),
+      });
+      await this.playerRepo.save(player);
+    } else if (player.role !== role) {
+      player = new Player({
+        ...player.props,
+        role,
       });
       await this.playerRepo.save(player);
     }

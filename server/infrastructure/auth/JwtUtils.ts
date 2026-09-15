@@ -1,10 +1,11 @@
 import crypto from 'crypto';
+import { PlayerRole } from '../../domain/types';
 
 export interface JwtPayload {
   sub: string;
   email: string;
   username: string;
-  role: 'STUDENT' | 'ADMIN';
+  role: PlayerRole;
   iat?: number;
   exp?: number;
 }

@@ -4,6 +4,9 @@ import { AdminCreateSpawnUseCase } from '../services/AdminCreateSpawnUseCase';
 import { AdminEditSpawnUseCase } from '../services/AdminEditSpawnUseCase';
 import { RotateSpawnsUseCase } from '../services/RotateSpawnsUseCase';
 import { GetAdminOverviewUseCase } from '../services/GetAdminOverviewUseCase';
+import { ResetWeeklyLeaderboardUseCase } from '../services/ResetWeeklyLeaderboardUseCase';
+import { ResetWeeklyCycleUseCase } from '../services/ResetWeeklyCycleUseCase';
+import { IWeeklyCycleRepository } from '../repositories/IWeeklyCycleRepository';
 import { IRotationService } from '../services/IRotationService';
 import { DatabasePool, dbPool } from '../infrastructure/database/pool';
 
@@ -12,6 +15,9 @@ export class AdminController {
     private readonly adminManageSpawnsUseCase: AdminManageSpawnsUseCase,
     private readonly rotateSpawnsUseCase: RotateSpawnsUseCase,
     private readonly getAdminOverviewUseCase: GetAdminOverviewUseCase,
+    private readonly resetWeeklyLeaderboardUseCase?: ResetWeeklyLeaderboardUseCase,
+    private readonly resetWeeklyCycleUseCase?: ResetWeeklyCycleUseCase,
+    private readonly weeklyCycleRepo?: IWeeklyCycleRepository,
     private readonly adminCreateSpawnUseCase?: AdminCreateSpawnUseCase,
     private readonly adminEditSpawnUseCase?: AdminEditSpawnUseCase,
     private readonly rotationService?: IRotationService,
@@ -90,6 +96,144 @@ export class AdminController {
     }
   };
 
+  public resetWeeklyLeaderboard = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!this.resetWeeklyLeaderboardUseCase) {
+        throw new Error('ResetWeeklyLeaderboardUseCase not configured');
+      }
+
+      const result = await this.resetWeeklyLeaderboardUseCase.execute();
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /api/v1/admin/weekly-cycle/reset
+   * Triggers manual weekly reset with deterministic key: `manual:<active_cycle_id>`
+   */
+  public resetWeeklyCycle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!this.resetWeeklyCycleUseCase) {
+        throw new Error('ResetWeeklyCycleUseCase not configured');
+      }
+
+      let activeCycleId = 'initial';
+      if (this.weeklyCycleRepo) {
+        const activeCycle = await this.weeklyCycleRepo.getActiveCycle();
+        if (activeCycle) {
+          activeCycleId = activeCycle.id;
+        }
+      }
+
+      const resetKey = (req.body?.resetKey as string) || `manual:${activeCycleId}`;
+      const triggeredByProfileId = req.user?.id || (req.body?.triggeredByProfileId as string) || null;
+
+      const result = await this.resetWeeklyCycleUseCase.execute({
+        resetKey,
+        resetType: 'manual',
+        triggeredByProfileId,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: result.message,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * POST /api/v1/admin/weekly-cycle/manual-reset
+   * Full atomic weekly cycle transition (new batch-engine implementation)
+   */
+  public manualWeeklyReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // If use-case is available, delegate to it for consistent behavior
+    if (this.resetWeeklyCycleUseCase) {
+      return this.resetWeeklyCycle(req, res, next);
+    }
+
+    // Fallback: direct DB implementation from remote
+    try {
+      const adminId = req.user?.id || null;
+      let newCycleId = '';
+      let playersResetCount = 0;
+
+      const client = await this.pool.getPool().connect();
+      try {
+        await client.query('BEGIN');
+
+        const activeCycleRes = await client.query<any>(
+          `SELECT id, cycle_number FROM weekly_cycles WHERE status = 'active' FOR UPDATE;`
+        );
+        let nextCycleNumber = 1;
+        if (activeCycleRes.rowCount && activeCycleRes.rowCount > 0) {
+          const oldCycleId = activeCycleRes.rows[0].id;
+          nextCycleNumber = Number(activeCycleRes.rows[0].cycle_number) + 1;
+          await client.query(
+            `UPDATE weekly_cycles SET status = 'completed', finalized_at = NOW() WHERE id = $1;`,
+            [oldCycleId]
+          );
+        }
+
+        const cycleInsertRes = await client.query<any>(
+          `INSERT INTO weekly_cycles (id, cycle_number, starts_at, ends_at, status)
+           VALUES (gen_random_uuid(), $1, NOW(), NOW() + INTERVAL '7 days', 'active')
+           RETURNING id;`,
+          [nextCycleNumber]
+        );
+        newCycleId = cycleInsertRes.rows[0].id;
+
+        const resetRes = await client.query<any>(
+          `UPDATE profiles SET season_points = 0, updated_at = NOW();`
+        );
+        playersResetCount = resetRes.rowCount || 0;
+
+        await client.query(
+          `INSERT INTO audit_logs (id, admin_id, action, target_entity, target_id, details, created_at)
+           VALUES (gen_random_uuid(), $1, 'WEEKLY_RESET_TRIGGER', 'weekly_cycles', $2, $3, NOW());`,
+          [
+            adminId,
+            newCycleId,
+            JSON.stringify({ previousCycleId: activeCycleRes.rows[0]?.id, playersResetCount }),
+          ]
+        );
+
+        await client.query('COMMIT');
+      } catch (txErr) {
+        await client.query('ROLLBACK');
+        throw txErr;
+      } finally {
+        client.release();
+      }
+
+      let rotationResult = null;
+      if (this.rotationService) {
+        rotationResult = await this.rotationService.rotate({ force: true, adminId });
+      }
+
+      res.json({
+        success: true,
+        playersResetCount,
+        message: `Weekly cycle reset executed successfully. ${playersResetCount} players reset.`,
+        newCycleId,
+        newBatchId: rotationResult?.activeBatch?.id || null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /**
+   * Planned Admin Routes (Guarded by requireAdmin)
+   */
   public createSpawn = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!this.adminCreateSpawnUseCase) {
@@ -253,83 +397,6 @@ export class AdminController {
       res.json({
         success: true,
         message: 'Weekly reset configuration updated successfully.',
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  public manualWeeklyReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const adminId = req.user?.id || null;
-      let newCycleId = '';
-      let playersResetCount = 0;
-
-      // Atomic weekly cycle transition
-      const client = await this.pool.getPool().connect();
-      try {
-        await client.query('BEGIN');
-
-        // 1. Get and complete active cycle
-        const activeCycleRes = await client.query<any>(
-          `SELECT id, cycle_number FROM weekly_cycles WHERE status = 'active' FOR UPDATE;`
-        );
-        let nextCycleNumber = 1;
-        if (activeCycleRes.rowCount && activeCycleRes.rowCount > 0) {
-          const oldCycleId = activeCycleRes.rows[0].id;
-          nextCycleNumber = Number(activeCycleRes.rows[0].cycle_number) + 1;
-          await client.query(
-            `UPDATE weekly_cycles SET status = 'completed', finalized_at = NOW() WHERE id = $1;`,
-            [oldCycleId]
-          );
-        }
-
-        // 2. Create new active cycle
-        const cycleInsertRes = await client.query<any>(
-          `INSERT INTO weekly_cycles (id, cycle_number, starts_at, ends_at, status)
-           VALUES (gen_random_uuid(), $1, NOW(), NOW() + INTERVAL '7 days', 'active')
-           RETURNING id;`,
-          [nextCycleNumber]
-        );
-        newCycleId = cycleInsertRes.rows[0].id;
-
-        // 3. Reset player weekly points (season_points)
-        const resetRes = await client.query<any>(
-          `UPDATE profiles SET season_points = 0, updated_at = NOW();`
-        );
-        playersResetCount = resetRes.rowCount || 0;
-
-        // 4. Log audit event
-        await client.query(
-          `INSERT INTO audit_logs (id, admin_id, action, target_entity, target_id, details, created_at)
-           VALUES (gen_random_uuid(), $1, 'WEEKLY_RESET_TRIGGER', 'weekly_cycles', $2, $3, NOW());`,
-          [
-            adminId,
-            newCycleId,
-            JSON.stringify({ previousCycleId: activeCycleRes.rows[0]?.id, playersResetCount }),
-          ]
-        );
-
-        await client.query('COMMIT');
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        throw txErr;
-      } finally {
-        client.release();
-      }
-
-      // 5. Force rotate spawn batch for the new cycle
-      let rotationResult = null;
-      if (this.rotationService) {
-        rotationResult = await this.rotationService.rotate({ force: true, adminId });
-      }
-
-      res.json({
-        success: true,
-        playersResetCount,
-        message: `Weekly cycle reset executed successfully. ${playersResetCount} players reset.`,
-        newCycleId,
-        newBatchId: rotationResult?.activeBatch?.id || null,
       });
     } catch (err) {
       next(err);

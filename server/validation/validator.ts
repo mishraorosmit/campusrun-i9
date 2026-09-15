@@ -1,6 +1,6 @@
 export interface ValidationRule<T = unknown> {
   field: string;
-  validate: (val: T) => boolean;
+  validate: (val: T, data?: Record<string, unknown>) => boolean;
   message: string;
 }
 
@@ -19,7 +19,7 @@ export class SchemaValidator {
 
     for (const rule of schema.rules) {
       const val = data ? data[rule.field] : undefined;
-      const isValid = rule.validate(val);
+      const isValid = rule.validate(val, data);
       if (!isValid) {
         issues.push({
           field: rule.field,
@@ -68,5 +68,19 @@ export class SchemaValidator {
       return val.toLowerCase() === 'true' || val.toLowerCase() === 'false';
     }
     return false;
+  }
+
+  public static isValidUrl(val: unknown): boolean {
+    if (typeof val !== 'string' || val.trim().length === 0) return false;
+    try {
+      const parsed = new URL(val);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  public static isObject(val: unknown): boolean {
+    return typeof val === 'object' && val !== null && !Array.isArray(val);
   }
 }

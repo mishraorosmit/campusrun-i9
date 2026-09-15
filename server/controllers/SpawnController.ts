@@ -2,6 +2,26 @@ import { Request, Response, NextFunction } from 'express';
 import { GetActiveSpawnsUseCase } from '../services/GetActiveSpawnsUseCase';
 import { GetSpawnByIdUseCase } from '../services/GetSpawnByIdUseCase';
 import { ListSpawnsUseCase } from '../services/ListSpawnsUseCase';
+import { SpawnPoint } from '../domain/entities/SpawnPoint';
+
+/** Strips internal/admin-only fields before sending to unauthenticated clients */
+function toPublicSpawnDTO(s: SpawnPoint) {
+  return {
+    id: s.id,
+    code: s.code,
+    title: s.props.title,
+    description: s.props.description || undefined,
+    clue: s.props.clue || undefined,
+    tier: s.props.tier,
+    status: s.status,
+    points: s.points,
+    claimRadiusMeters: s.claimRadiusMeters,
+    coordinates: s.coordinates,
+    svgCoordinates: s.props.svgCoordinates,
+    zoneName: s.props.zoneName,
+    expiresAt: s.props.expiresAt.toISOString(),
+  };
+}
 
 export class SpawnController {
   constructor(
@@ -56,7 +76,7 @@ export class SpawnController {
       const spawns = await this.getActiveSpawnsUseCase.execute(bounds);
       res.json({
         success: true,
-        data: spawns.map((s) => s.toJSON()),
+        data: spawns.map(toPublicSpawnDTO),
       });
     } catch (err) {
       next(err);
@@ -70,7 +90,7 @@ export class SpawnController {
 
       res.json({
         success: true,
-        data: spawn.toJSON(),
+        data: toPublicSpawnDTO(spawn),
       });
     } catch (err) {
       next(err);

@@ -1,7 +1,9 @@
 import { ISpawnRepository } from '../repositories/ISpawnRepository';
+import { IRealtimeService } from './IRealtimeService';
+import { IEventBus } from '../events/IEventBus';
 import { IAuditService } from './IAuditService';
-import { NotFoundError } from '../errors/NotFoundError';
-import { transactionManager } from '../infrastructure/database/transaction';
+import { SpawnExpiredEvent } from '../domain/events';
+import { NotFoundError } from '../errors';
 
 export interface ToggleSpawnResult {
   id: string;
@@ -14,6 +16,8 @@ export interface ToggleSpawnResult {
 export class AdminManageSpawnsUseCase {
   constructor(
     private readonly spawnRepo: ISpawnRepository,
+    private readonly realtimeService?: IRealtimeService,
+    private readonly eventBus?: IEventBus,
     private readonly auditService?: IAuditService
   ) {}
 
@@ -37,9 +41,9 @@ export class AdminManageSpawnsUseCase {
       throw new NotFoundError(`Spawn point "${id}" not found.`);
     }
 
-    const previousEnabled = spawn.isEnabled;
+    const previousEnabled = (spawn as any).isEnabled ?? enabled;
 
-    // Idempotent: If current state matches target state, no-op and return immediately
+    // Idempotent: If current state matches target state, return immediately
     if (previousEnabled === enabled) {
       if (this.auditService) {
         await this.auditService.log({
@@ -57,20 +61,60 @@ export class AdminManageSpawnsUseCase {
           createdAt: new Date(),
         });
       }
-
-      return {
-        id,
-        enabled,
-        previousEnabled,
-        idempotent: true,
-        batchId: spawn.batchId,
-      };
+      return { id, enabled, previousEnabled, idempotent: true, batchId: (spawn as any).batchId };
     }
 
-    // Atomically update state while preserving batch linkages and claims integrity
-    await transactionManager.runInTransaction(async (tx) => {
-      await this.spawnRepo.updateStatus(id, spawn.status, enabled, tx);
-    });
+    await this.spawnRepo.updateStatus(id, spawn.status, enabled);
+
+    // Publish domain event on disable
+    if (!enabled && this.eventBus) {
+      try {
+        await this.eventBus.publish(
+          new SpawnExpiredEvent({
+            spawnIds: [id],
+            spawnId: id,
+            spawnCode: spawn.code,
+            zoneId: spawn.props.zoneId,
+            reason: 'DISABLED',
+            expiredAt: new Date(),
+          })
+        );
+      } catch (err) {
+        console.error('[AdminManageSpawnsUseCase] Error publishing SpawnExpiredEvent:', err);
+      }
+    }
+
+    // Realtime broadcast
+    if (this.realtimeService) {
+      if (!enabled) {
+        this.realtimeService.broadcastSpawnsExpired({
+          spawnIds: [id],
+          spawnId: id,
+          spawnCode: spawn.code,
+          reason: 'DISABLED',
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        this.realtimeService.broadcastSpawnBatchCreated({
+          spawns: [
+            {
+              id: spawn.id,
+              code: spawn.code,
+              title: spawn.props.title,
+              points: spawn.points,
+              tier: spawn.props.tier,
+              claimRadiusMeters: spawn.claimRadiusMeters,
+              coordinates: spawn.coordinates,
+              svgCoordinates: spawn.props.svgCoordinates,
+              zoneName: spawn.props.zoneName,
+              zoneId: spawn.props.zoneId,
+              expiresAt: spawn.props.expiresAt.toISOString(),
+            },
+          ],
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
 
     // Audit Logging
     if (this.auditService) {
@@ -84,7 +128,7 @@ export class AdminManageSpawnsUseCase {
           enabled,
           previousEnabled,
           idempotent: false,
-          batchId: spawn.batchId,
+          batchId: (spawn as any).batchId,
         },
         createdAt: new Date(),
       });
@@ -95,7 +139,7 @@ export class AdminManageSpawnsUseCase {
       enabled,
       previousEnabled,
       idempotent: false,
-      batchId: spawn.batchId,
+      batchId: (spawn as any).batchId,
     };
   }
 }

@@ -72,6 +72,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
 
   const handleTriggerClaim = async () => {
     if (isClaiming || isClaimed) return;
+    setAutoClaimEnabled(false);
     setIsClaiming(true);
     try {
       await onClaim(spawn.id);
@@ -94,7 +95,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
         </div>
 
         {/* Value Tag */}
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-[#FBEEE1] border border-[#EADBC8] rounded-xl">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#FDE8D7] border-2 border-[#1A1310]">
           <Flame className="w-4 h-4 text-[#F16321] fill-[#F16321]" />
           <span className="text-sm font-bold font-display text-[#1A1310]">
             +{spawn.points} PTS
@@ -117,7 +118,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
       </div>
 
       {/* Description & Physical Clue */}
-      <div className="bg-[#FAF4EB] border border-[#EADBC8] p-3.5 rounded-2xl flex flex-col gap-2">
+      <div className="bg-white border-2 border-[#1A1310] p-3.5 shadow-[3px_3px_0_#1A1310] flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#70625B]">
           CAMPUS LOCATION & CLUE
         </span>
@@ -134,8 +135,8 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
 
       {/* Proximity / Range Status Banner */}
       {isClaimed ? (
-        <div className="p-3.5 bg-[#FAF4EB] border border-[#EADBC8] rounded-2xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#1A1310] text-[#FAF4EB] flex items-center justify-center shrink-0">
+          <div className="p-3.5 bg-white border-2 border-[#1A1310] flex items-center gap-3">
+          <div className="w-9 h-9 bg-[#1A1310] text-white flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5 text-[#FAF4EB]" />
           </div>
           <div className="flex flex-col">
@@ -147,7 +148,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
         </div>
       ) : inRange ? (
         /* SCREEN 04 — IN RANGE STATE */
-        <div className="p-3.5 bg-[#FBEEE1] border border-[#F16321]/30 rounded-2xl flex flex-col gap-2.5">
+        <div className="p-3.5 bg-[#FDE8D7] border-2 border-[#1A1310] shadow-[3px_3px_0_#F16321] flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="relative flex items-center justify-center w-3 h-3">
@@ -183,7 +184,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
         </div>
       ) : (
         /* SCREEN 04A — OUT OF RANGE STATE */
-        <div className="p-3.5 bg-[#FAF4EB] border border-[#EADBC8] rounded-2xl flex flex-col gap-2">
+        <div className="p-3.5 bg-white border-2 border-[#1A1310] flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Radio className="w-3.5 h-3.5 text-[#70625B]" />
@@ -225,7 +226,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
         ) : inRange ? (
           <Button
             variant="primary"
-            className="w-full py-3.5 text-sm font-bold shadow-md animate-pulse"
+            className="w-full py-3.5 text-sm font-bold shadow-[3px_3px_0_#1A1310] animate-pulse"
             isLoading={isClaiming}
             onClick={handleTriggerClaim}
           >
@@ -236,7 +237,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
           <Button
             variant="outline"
             disabled
-            className="w-full py-3.5 text-xs text-[#70625B] border-[#EADBC8] bg-[#FAF4EB]/60 cursor-not-allowed"
+            className="w-full py-3.5 text-xs text-[#70625B] border-[#1A1310] bg-white cursor-not-allowed"
           >
             <Footprints className="w-4 h-4 mr-2 text-[#70625B]" />
             MOVE CLOSER TO CLAIM ({distanceRemaining}M TO PERIMETER)

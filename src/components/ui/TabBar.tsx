@@ -32,7 +32,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   return (
     <nav
       aria-label="Main Player Navigation"
-      className="w-full bg-[#FAF4EB]/95 backdrop-blur-md border-t border-[#EADBC8] px-3 pt-1 pb-safe shrink-0 z-[40]"
+      className="w-full bg-white border-t-[3px] border-[#1A1310] px-3 pt-1 pb-safe shrink-0 z-[40]"
     >
       <div className="flex items-center justify-around h-14 max-w-md mx-auto">
         {tabs.map((tab) => {
@@ -46,19 +46,14 @@ export const TabBar: React.FC<TabBarProps> = ({
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 'relative flex flex-col items-center justify-center flex-1 h-full min-h-[44px] min-w-[44px] transition-all cursor-pointer group',
-                isActive ? 'text-[#F16321]' : 'text-[#70625B] hover:text-[#1A1310]'
+                isActive ? 'text-[#1A1310]' : 'text-[#70625B] hover:text-[#1A1310]'
               )}
             >
-              {/* Active Pill background highlight */}
-              {isActive && (
-                <span className="absolute inset-x-3 inset-y-1.5 bg-[#FBEEE1] rounded-xl -z-10 transition-all border border-[#F3DEC9]" />
-              )}
-
               <div className="relative flex items-center justify-center">
                 <Icon
                   className={cn(
                     'w-5 h-5 transition-transform group-active:scale-95',
-                    isActive ? 'stroke-[2.4]' : 'stroke-[1.8]'
+                    isActive ? 'stroke-[2.6]' : 'stroke-[1.8]'
                   )}
                 />
                 {tab.badge && tab.badge > 0 && !isActive && (
@@ -71,7 +66,7 @@ export const TabBar: React.FC<TabBarProps> = ({
               <span
                 className={cn(
                   'text-[10px] mt-0.5 tracking-tight font-display select-none',
-                  isActive ? 'font-bold text-[#F16321]' : 'font-medium text-[#70625B]'
+                  isActive ? 'font-bold text-[#1A1310]' : 'font-medium text-[#70625B]'
                 )}
               >
                 {tab.label}

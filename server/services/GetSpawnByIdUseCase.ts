@@ -6,7 +6,11 @@ export class GetSpawnByIdUseCase {
   constructor(private readonly spawnRepo: ISpawnRepository) {}
 
   public async execute(id: string): Promise<SpawnPoint> {
-    const spawn = await this.spawnRepo.findById(id);
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      throw new NotFoundError('Spawn ID is required');
+    }
+
+    const spawn = await this.spawnRepo.findById(id.trim());
     if (!spawn) {
       throw new NotFoundError(`Spawn point "${id}" not found.`);
     }
