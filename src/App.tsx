@@ -52,9 +52,12 @@ export default function App() {
     lng: playerLng,
     accuracy: playerAccuracy,
     heading: playerHeading,
+    speed: playerSpeed,
     isSimulated: isSimulatingGps,
+    isLoading: isLocationLoading,
     toggleSimulation,
     setSimulatedPosition,
+    retry: retryLocation,
     error: locationError,
   } = useGeoLocation({ simulate: true });
 
@@ -194,10 +197,15 @@ export default function App() {
                 playerLng={playerLng}
                 playerAccuracy={playerAccuracy}
                 playerHeading={playerHeading}
+                accuracyMeters={playerAccuracy}
+                heading={playerHeading}
+                speed={playerSpeed}
+                isLocationLoading={isLocationLoading}
                 onClaimSpawn={handleClaimSpawn}
                 isSimulatingGps={isSimulatingGps}
                 onToggleSimulatedGps={() => toggleSimulation(!isSimulatingGps)}
                 onUpdateSimulatedPosition={setSimulatedPosition}
+                onRetryGps={retryLocation}
                 locationError={locationError}
               />
             )}

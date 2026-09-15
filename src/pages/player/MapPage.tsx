@@ -7,7 +7,13 @@ import { PointDetailSheet } from '../../components/gameplay/PointDetailSheet';
 import { LandmarkDetailSheet } from '../../components/gameplay/LandmarkDetailSheet';
 import { ClaimConfirmationModal } from '../../components/gameplay/ClaimConfirmationModal';
 import { ClaimResult } from '../../services/types';
-import { getTurfDistanceMeters, getNearestSpawn, gpsToSvg } from '../../lib/geo';
+import {
+  getTurfDistanceMeters,
+  getNearestSpawn,
+  gpsToSvg,
+  svgToGps,
+  isPointInsideCampus,
+} from '../../lib/geo';
 import { CampusLandmark, getNearbySpawnsForLandmark, getNearestActiveSpawn } from '../../data/landmarks';
 import { MAP_PALETTE } from '../../styles/tokens';
 import {
@@ -20,6 +26,8 @@ import {
   WifiOff,
   CheckCircle2,
   Sparkles,
+  MapPinOff,
+  Loader2,
 } from 'lucide-react';
 
 export interface MapPageProps {
@@ -30,10 +38,15 @@ export interface MapPageProps {
   playerLng: number;
   playerAccuracy?: number | null;
   playerHeading?: number | null;
+  accuracyMeters?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  isLocationLoading?: boolean;
   onClaimSpawn: (spawnId: string) => Promise<ClaimResult | { success: boolean; message: string }>;
   isSimulatingGps?: boolean;
   onToggleSimulatedGps?: () => void;
   onUpdateSimulatedPosition?: (lat: number, lng: number) => void;
+  onRetryGps?: () => void;
   locationError?: string | null;
 }
 
@@ -45,10 +58,15 @@ export const MapPage: React.FC<MapPageProps> = ({
   playerLng,
   playerAccuracy,
   playerHeading,
+  accuracyMeters,
+  heading,
+  speed,
+  isLocationLoading = false,
   onClaimSpawn,
   isSimulatingGps,
   onToggleSimulatedGps,
   onUpdateSimulatedPosition,
+  onRetryGps,
   locationError,
 }) => {
   const [selectedSpawn, setSelectedSpawn] = useState<SpawnPoint | null>(null);
@@ -154,6 +172,25 @@ export const MapPage: React.FC<MapPageProps> = ({
     ? zones.find((z) => z.id === selectedSpawn.zoneId) || null
     : null;
 
+  // Off-campus calculation
+  const isInsideCampus = isPointInsideCampus(playerLat, playerLng);
+  const distanceToCampusKm = !isInsideCampus
+    ? Math.round(getTurfDistanceMeters(playerLat, playerLng, 20.2485, 85.8010) / 1000)
+    : 0;
+
+  // Tap-to-walk coordinate click in simulated mode
+  const handleMapCoordinateClick = useCallback((coords: { svgX: number; svgY: number }) => {
+    if (isSimulatingGps && onUpdateSimulatedPosition) {
+      const gps = svgToGps(coords.svgX, coords.svgY);
+      onUpdateSimulatedPosition(gps.lat, gps.lng);
+    }
+  }, [isSimulatingGps, onUpdateSimulatedPosition]);
+
+  // Handle zoom action completion so it doesn't re-fire on coordinate updates
+  const handleZoomActionComplete = useCallback(() => {
+    setZoomAction(null);
+  }, []);
+
   return (
     <div className="relative w-full h-full flex-1 bg-[#F4EFE6] overflow-hidden flex flex-col">
       {/* Screen 03c: Offline Banner */}
@@ -182,6 +219,26 @@ export const MapPage: React.FC<MapPageProps> = ({
         </div>
       )}
 
+      {/* Off-Campus Boundary Warning Banner (When real GPS is active but device is far outside campus) */}
+      {!isSimulatingGps && !isInsideCampus && !isLocationLoading && (
+        <div className="bg-[#9E3608] text-[#FAF4EB] px-4 py-2 flex items-center justify-between text-xs font-medium z-30 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPinOff className="w-4 h-4 text-[#FAF4EB] shrink-0" />
+            <span className="truncate">
+              Device GPS is ~{distanceToCampusKm.toLocaleString()}km outside ITER campus boundary.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              if (onToggleSimulatedGps) onToggleSimulatedGps();
+            }}
+            className="text-[10px] bg-[#FAF4EB] text-[#9E3608] px-2.5 py-1 rounded-lg font-bold shrink-0 hover:bg-[#FAF4EB]/90 transition-colors ml-2"
+          >
+            SWITCH TO SIMULATOR
+          </button>
+        </div>
+      )}
+
       {/* Top Map Action Header Overlay */}
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
         {/* Active Spawns Pill */}
@@ -206,21 +263,47 @@ export const MapPage: React.FC<MapPageProps> = ({
             <Layers className="w-4 h-4" />
           </button>
 
-          {/* GPS Simulation Toggle */}
+          {/* GPS Simulation / Real GPS Tracker Button */}
           {onToggleSimulatedGps && (
             <button
               onClick={onToggleSimulatedGps}
-              title="Toggle GPS Mode"
-              className={`px-2.5 py-1.5 rounded-xl border shadow-xs text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              title={isSimulatingGps ? 'Switch to Real Device GPS' : 'Switch to Campus Simulation'}
+              className={`px-3 py-1.5 rounded-xl border shadow-xs text-xs font-bold flex items-center gap-1.5 transition-all ${
                 isSimulatingGps
-                  ? 'bg-[#F16321] text-[#FAF4EB] border-[#D44E11]'
-                  : 'bg-[#FAF4EB] text-[#70625B] border-[#EADBC8]'
+                  ? 'bg-[#FBEEE1] text-[#F16321] border-[#F16321]/40 hover:bg-[#F16321] hover:text-[#FAF4EB]'
+                  : isLocationLoading
+                  ? 'bg-[#1A1310] text-[#FAF4EB] border-[#33251E]'
+                  : locationError
+                  ? 'bg-red-50 text-red-700 border-red-200'
+                  : 'bg-[#1A1310] text-[#FAF4EB] border-[#33251E]'
               }`}
             >
-              <Locate className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase tracking-wider">
-                {isSimulatingGps ? 'START TRACKING' : 'TRACKING LIVE'}
-              </span>
+              {isSimulatingGps ? (
+                <>
+                  <Footprints className="w-3.5 h-3.5" />
+                  <span className="text-[10px] uppercase tracking-wider font-mono">SIM GPS</span>
+                </>
+              ) : isLocationLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#F16321]" />
+                  <span className="text-[10px] uppercase tracking-wider font-mono">ACQUIRING...</span>
+                </>
+              ) : locationError ? (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[10px] uppercase tracking-wider font-mono">GPS ERROR</span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider font-mono">
+                    LIVE {accuracyMeters || playerAccuracy ? `±${Math.round((accuracyMeters || playerAccuracy)!)}m` : 'GPS'}
+                  </span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -235,13 +318,18 @@ export const MapPage: React.FC<MapPageProps> = ({
           playerLng={playerLng}
           playerAccuracy={playerAccuracy}
           playerHeading={playerHeading}
+          accuracyMeters={accuracyMeters}
+          heading={heading}
+          isSimulated={isSimulatingGps}
           selectedSpawnId={selectedSpawn?.id || null}
           onSelectSpawn={handleSelectSpawn}
           selectedLandmarkId={selectedLandmark?.id || null}
           onSelectLandmark={handleSelectLandmark}
           showZoneOverlay={showZoneOverlay}
           onMapClick={handleMapClick}
+          onMapCoordinateClick={handleMapCoordinateClick}
           zoomAction={zoomAction}
+          onZoomActionComplete={handleZoomActionComplete}
         />
 
         {/* Floating Map Zoom & Recenter Controls (Right Edge) */}
@@ -551,7 +639,12 @@ export const MapPage: React.FC<MapPageProps> = ({
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  window.location.reload();
+                  setShowLocationDeniedModal(false);
+                  if (onRetryGps) {
+                    onRetryGps();
+                  } else if (onToggleSimulatedGps) {
+                    onToggleSimulatedGps();
+                  }
                 }}
               >
                 RETRY BROWSER GEOLOCATION

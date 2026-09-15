@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useMemo, useCallback } from 'react';
 import * as d3 from 'd3';
 import { SpawnPoint, CampusZone } from '../../types';
-import { getTurfDistanceMeters, gpsToSvg, legacyCoordinatesToSvg } from '../../lib/geo';
+import { getTurfDistanceMeters, gpsToSvg, legacyCoordinatesToSvg, metersToSvgUnits } from '../../lib/geo';
 import { CampusSvgLayer } from './CampusSvgLayer';
 import { CampusLandmark, getLandmarkById, getSvgHighlightTargetId } from '../../data/landmarks';
 
@@ -16,13 +16,18 @@ export interface CampusMapCanvasProps {
   playerLng: number;
   playerAccuracy?: number | null;
   playerHeading?: number | null;
+  accuracyMeters?: number | null;
+  heading?: number | null;
+  isSimulated?: boolean;
   selectedSpawnId: string | null;
   onSelectSpawn: (spawn: SpawnPoint) => void;
   selectedLandmarkId?: string | null;
   onSelectLandmark?: (landmark: CampusLandmark | null) => void;
   showZoneOverlay?: boolean;
   onMapClick?: () => void;
+  onMapCoordinateClick?: (coords: { svgX: number; svgY: number }) => void;
   zoomAction?: { type: 'in' | 'out' | 'recenter' | 'focus'; target?: { x: number; y: number } } | null;
+  onZoomActionComplete?: () => void;
 }
 
 export interface ProcessedSpawnNode {
@@ -118,15 +123,21 @@ interface PlayerMarkerLayerProps {
   svgY: number;
   accuracy?: number | null;
   heading?: number | null;
+  isSimulated?: boolean;
 }
 
 /**
- * Isolated player location marker with animated radar halo
+ * Isolated player location marker with animated radar halo and live orientation cone
  * Memoized to avoid re-rendering on external canvas updates unless player coordinates change
  */
 const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
-  ({ svgX, svgY, accuracy, heading }) => {
-    const accuracyRadius = Math.max(38, Math.min(100, (accuracy ?? 20) * 1.4));
+  ({ svgX, svgY, accuracy, heading, isSimulated }) => {
+    // Dynamic accuracy radius in SVG units (clamped to sensible visual range: min 28, max 220)
+    const accuracyRadius = Math.max(
+      28,
+      Math.min(220, accuracy ? metersToSvgUnits(accuracy) : 45)
+    );
+
     return (
       <g
         id="player-location"
@@ -134,23 +145,23 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
         className="pointer-events-none"
         style={{ pointerEvents: 'none' }}
       >
-        {/* Accuracy & Proximity Claim Radius Halo */}
+        {/* Dynamic Accuracy & Proximity Claim Radius Halo */}
         <circle
           r={accuracyRadius}
           fill="#F16321"
-          fillOpacity="0.12"
+          fillOpacity={isSimulated ? 0.08 : 0.14}
           stroke="#F16321"
-          strokeWidth="2"
+          strokeWidth="1.75"
           strokeDasharray="4,4"
           className="animate-pulse"
         />
 
         {/* Expanding Radar Wave */}
-        <circle r="28" fill="none" stroke="#F16321" strokeWidth="2.5" opacity="0.6">
+        <circle r="26" fill="none" stroke="#F16321" strokeWidth="2.5" opacity="0.6">
           <animate
             attributeName="r"
             from="14"
-            to="55"
+            to={Math.max(45, Math.min(90, accuracyRadius))}
             dur="2.4s"
             repeatCount="indefinite"
           />
@@ -163,22 +174,27 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
           />
         </circle>
 
+        {/* Heading Indicator Arrow */}
+        {heading !== null && heading !== undefined && !isNaN(heading) && (
+          <path
+            d="M 0 -10 L 7 8 L 0 5 L -7 8 Z"
+            fill="#F16321"
+            stroke="#1A1310"
+            strokeWidth="2"
+            transform={`rotate(${heading})`}
+          />
+        )}
+
         {/* Core Player Dot */}
         <circle r="13" fill="#FFFFFF" stroke="#1A1310" strokeWidth="3" />
-        <path
-          d="M 0 -10 L 7 8 L 0 5 L -7 8 Z"
-          fill="#F16321"
-          stroke="#1A1310"
-          strokeWidth="2"
-          transform={`rotate(${heading ?? 0})`}
-        />
+        <circle r="8" fill="#F16321" />
 
         {/* Player Label Pill */}
         <g transform="translate(0, -26)">
           <rect
-            x="-36"
+            x="-38"
             y="-14"
-            width="72"
+            width="76"
             height="18"
             rx="0"
             fill="#1A1310"
@@ -190,11 +206,12 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
             y="-2"
             textAnchor="middle"
             fill="#FAF4EB"
-            fontSize="10"
+            fontSize="9"
             fontWeight="bold"
             letterSpacing="1"
+            className="font-mono"
           >
-            YOU
+            {isSimulated ? 'YOU · SIM' : 'YOU · GPS'}
           </text>
         </g>
       </g>
@@ -204,7 +221,8 @@ const PlayerMarkerLayer = React.memo<PlayerMarkerLayerProps>(
     prev.svgX === next.svgX &&
     prev.svgY === next.svgY &&
     prev.accuracy === next.accuracy &&
-    prev.heading === next.heading
+    prev.heading === next.heading &&
+    prev.isSimulated === next.isSimulated
 );
 PlayerMarkerLayer.displayName = 'PlayerMarkerLayer';
 
@@ -219,14 +237,21 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
   playerLng,
   playerAccuracy,
   playerHeading,
+  accuracyMeters,
+  heading,
+  isSimulated = false,
   selectedSpawnId,
   onSelectSpawn,
   selectedLandmarkId,
   onSelectLandmark,
   showZoneOverlay = true,
   onMapClick,
+  onMapCoordinateClick,
   zoomAction,
+  onZoomActionComplete,
 }) => {
+  const effectiveAccuracy = accuracyMeters !== undefined ? accuracyMeters : playerAccuracy;
+  const effectiveHeading = heading !== undefined ? heading : playerHeading;
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const gRef = useRef<SVGGElement>(null);
@@ -610,15 +635,41 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
         .ease(d3.easeCubicOut)
         .call(zoom.transform, d3.zoomIdentity.translate(targetX, targetY).scale(scale));
     }
-  }, [zoomAction, playerSvg.x, playerSvg.y]);
+
+    onZoomActionComplete?.();
+  }, [zoomAction]);
 
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full bg-[#F8F3EA] overflow-hidden select-none cursor-grab active:cursor-grabbing touch-none"
-      onClick={() => {
+      onClick={(e) => {
         onSelectLandmark?.(null);
         onMapClick?.();
+
+        // If tap-to-walk coordinate handler is provided, transform click to SVG space
+        if (onMapCoordinateClick && svgRef.current && gRef.current) {
+          const svgEl = svgRef.current;
+          const gEl = gRef.current;
+          const pt = svgEl.createSVGPoint();
+          pt.x = e.clientX;
+          pt.y = e.clientY;
+          const screenCTM = gEl.getScreenCTM();
+          if (screenCTM) {
+            const transformed = pt.matrixTransform(screenCTM.inverse());
+            if (
+              transformed.x >= 0 &&
+              transformed.x <= 1991 &&
+              transformed.y >= 0 &&
+              transformed.y <= 3704
+            ) {
+              onMapCoordinateClick({
+                svgX: Math.round(transformed.x),
+                svgY: Math.round(transformed.y),
+              });
+            }
+          }
+        }
       }}
     >
       <svg
@@ -676,12 +727,13 @@ export const CampusMapCanvas: React.FC<CampusMapCanvasProps> = React.memo(({
           {/* Layer 4: D3 Differential Rendered Spawn Points Layer */}
           <g ref={spawnsLayerRef} id="spawn-points" />
 
-          {/* Layer 5: Player Location Marker with Live Pulsing Radar Ring */}
+          {/* Layer 5: Player Location Marker with Live Pulsing Radar Ring & Accuracy Halo */}
           <PlayerMarkerLayer
             svgX={playerSvg.x}
             svgY={playerSvg.y}
-            accuracy={playerAccuracy}
-            heading={playerHeading}
+            accuracy={effectiveAccuracy}
+            heading={effectiveHeading}
+            isSimulated={isSimulated}
           />
         </g>
       </svg>

@@ -240,3 +240,32 @@ export function isWithinClaimRadius(
   const distance = getTurfDistanceMeters(playerLat, playerLng, spawn.lat, spawn.lng);
   return distance <= spawn.claimRadiusMeters;
 }
+
+/**
+ * Determines whether a GPS coordinate is contained within the campus bounds
+ */
+export function isPointInsideCampus(lat: number, lng: number): boolean {
+  const { northWest, southEast } = CAMPUS_GEO_BOUNDS;
+  return (
+    lat <= northWest.lat &&
+    lat >= southEast.lat &&
+    lng >= northWest.lng &&
+    lng <= southEast.lng
+  );
+}
+
+/**
+ * Converts a distance in meters to approximate SVG units (pixels) on the campus canvas
+ */
+export function metersToSvgUnits(meters: number): number {
+  const { northWest, southEast, svgWidth } = CAMPUS_GEO_BOUNDS;
+  const campusWidthMeters = getTurfDistanceMeters(
+    northWest.lat,
+    northWest.lng,
+    northWest.lat,
+    southEast.lng
+  );
+  if (campusWidthMeters <= 0) return meters;
+  return (meters / campusWidthMeters) * svgWidth;
+}
+

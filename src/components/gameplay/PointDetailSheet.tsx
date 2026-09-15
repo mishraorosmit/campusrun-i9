@@ -72,6 +72,7 @@ export const PointDetailSheet: React.FC<PointDetailSheetProps> = ({
 
   const handleTriggerClaim = async () => {
     if (isClaiming || isClaimed) return;
+    setAutoClaimEnabled(false);
     setIsClaiming(true);
     try {
       await onClaim(spawn.id);

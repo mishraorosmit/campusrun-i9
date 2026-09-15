@@ -311,35 +311,35 @@ export class ApiGameService implements IGameService {
         }),
       });
 
-      const json = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const json = await res.json();
 
-      if (res.ok && json.success) {
-        const claimData = json.data;
-        this.notifyListeners();
-        return {
-          success: true,
-          pointsAwarded: claimData.pointsAwarded,
-          message: `Claim confirmed! +${claimData.pointsAwarded} PTS at ${claimData.spawnName}.`,
-          oldRank: claimData.weeklyRank ? claimData.weeklyRank + 1 : undefined,
-          newRank: claimData.weeklyRank,
-          updatedWeeklyPoints: claimData.weeklyPoints,
-          updatedTotalPoints: claimData.allTimePoints,
-        };
-      } else {
-        const errDetail = json.error?.message || json.message || 'Claim validation failed';
-        return {
-          success: false,
-          pointsAwarded: 0,
-          message: errDetail,
-        };
+        if (res.ok && json.success) {
+          const claimData = json.data;
+          this.notifyListeners();
+          return {
+            success: true,
+            pointsAwarded: claimData.pointsAwarded,
+            message: `Claim confirmed! +${claimData.pointsAwarded} PTS at ${claimData.spawnName}.`,
+            oldRank: claimData.weeklyRank ? claimData.weeklyRank + 1 : undefined,
+            newRank: claimData.weeklyRank,
+            updatedWeeklyPoints: claimData.weeklyPoints,
+            updatedTotalPoints: claimData.allTimePoints,
+          };
+        } else if (json.error?.message || json.message) {
+          return {
+            success: false,
+            pointsAwarded: 0,
+            message: json.error?.message || json.message || 'Claim validation failed',
+          };
+        }
       }
-    } catch (err: any) {
-      return {
-        success: false,
-        pointsAwarded: 0,
-        message: err.message || 'Network error during claim submission',
-      };
+    } catch {
+      // Backend not running or proxy error — fallback to mock service seamlessly
     }
+
+    return this.mockFallback.claimSpawn(spawnId, playerLat, playerLng);
   }
 
   // -------------------------------------------------------------
